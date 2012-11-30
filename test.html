@@ -1,0 +1,16 @@
+<script src="gel.js"></script>
+<script src="gelFunctions.js"></script>
+<script src="wdrp.js"></script>
+<script>
+
+function myCallback(){
+    console.log('this thing changed');
+}
+
+wdrp.init({
+    thing:1
+});
+
+wdrp.bind('[thing]', myCallback);
+
+</script>
