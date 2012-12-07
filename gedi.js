@@ -75,7 +75,7 @@
     //
     //***********************************************
 
-    Array.prototype.fastEach = function (callback) {
+    Array.prototype.fastEach = Array.prototype.fastEach  || function (callback) {
         for (var i = 0; i < this.length; i++) {
             if(callback(this[i], i, this)) break;
         }
@@ -385,10 +385,10 @@
     
         //If the binding has opperators in it, break them apart and set them individually.
         if(!(binding instanceof Path)){
-            var bindingParts = getPathsInExpression(binding);
+            var paths = Expression.parse(binding).paths;
                 
-            bindingParts.fastEach(function (path) {
-                setBinding(Path.parse(path), callback);
+            paths.fastEach(function (path) {
+                setBinding(path, callback);
             });
             return;
         }
@@ -495,27 +495,6 @@
                 // any following valid part? Add it to the absoluteParts.
                     absoluteParts.push(pathPart);
                     
-                }else if(pathPart.indexOf(gedi.relativePath) === 0){
-                //***********************************************
-                //
-                //      ToDo: LEGACY CODE SUPPORT. PHAZE OUT FOR 0.2.0
-                //
-                //      relative paths without the dividing slash eg: ~thing
-                //
-                //***********************************************
-                    absoluteParts.push(pathPart.slice(1));
-                    
-                }else if(pathPart.indexOf(gedi.upALevel) === 0){
-                //***********************************************
-                //
-                //      ToDo: LEGACY CODE SUPPORT. PHAZE OUT FOR 0.2.0
-                //
-                //      up a level paths without the dividing slash eg: ..thing
-                //
-                //***********************************************
-                    absoluteParts.pop();
-                    absoluteParts.push(pathPart.slice(1));
-                    
                 }else{
                 // Absolute path, clear the current absoluteParts
                     absoluteParts = [pathPart];
@@ -615,6 +594,37 @@
 
     //Public Objects ******************************************************************************
     
+    // IE7 is a pile of shit and won't let you inherit from arrays.
+    function inheritFromArray(){      
+        inheritFromArray.canInherit = inheritFromArray.canInherit || (function(){
+            function ie7Test(){}
+            ie7Test.prototype = new Array();
+            var instance = new ie7Test();
+            instance.push(1);
+            return instance.length === 1;
+        })();
+    
+        if(inheritFromArray.canInherit){
+            return new Array();
+        }else{
+            var tempPrototype = {};
+            for(var key in []){
+                tempPrototype[key] = [][key];
+            }
+            //from jQuery
+            tempPrototype.length = 0;
+            tempPrototype.pop = [].pop;
+            tempPrototype.push = [].push;
+            tempPrototype.slice = [].slice;
+            tempPrototype.splice = [].splice;
+            tempPrototype.join = [].join;
+            tempPrototype.indexOf = [].indexOf;
+            // add fastEach
+            tempPrototype.fastEach = [].fastEach;
+            return tempPrototype;
+        }
+    }
+    
     //***********************************************
     //
     //      Path Object
@@ -647,7 +657,7 @@
         
         self.original = path;
     }
-    Path.prototype = new Array();
+    Path.prototype = inheritFromArray();
     Path.prototype.toString = function(){
         var str = this.join(gedi.pathSeparator);
         return str && rawToPath(str) || undefined;
@@ -717,7 +727,7 @@
         
         self.paths = getPathsInExpression(self);
     }
-    Expression.prototype = new Array();
+    Expression.prototype = inheritFromArray();
     Expression.prototype.toString = function(){
         return this.original;
     };
@@ -742,6 +752,11 @@
         innerGedi.prototype = {
             Path: Path,
             Expression: Expression,
+            
+            utils:{
+                get:get,
+                set:set
+            },
             
         
             // *************************************************************************
