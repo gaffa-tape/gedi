@@ -272,7 +272,8 @@
             //if we have hit a non-object and we have more keys after this one,
             //return
             if (typeof reference[key] !== "object" && index < path.length - 1) {
-                return;
+                // Break out of the fastEach loop
+                return true;
             }
             if (index === path.length - 1) {
                 // if we are at the end of the line, delete the last key
