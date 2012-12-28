@@ -1,16 +1,92 @@
-<script src="gel.js"></script>
-<script src="gelFunctions.js"></script>
-<script src="wdrp.js"></script>
-<script>
+<!DOCTYPE html>
+<html>
+    <head>
+        <script src="gel/gel.js"></script>
+        <script src="gel/gelFunctions.js"></script>
+        <script src="gedi.js"></script>
+        <script>
+        window.onload = function(){
 
-function myCallback(){
-    console.log('this thing changed');
-}
+            var tests = [
+                {
+                    name: "basic get",
+                    test: function(){
+                        var gediTest = new gedi({thing:'stuff'});
+                        
+                        this.passed = gediTest.get('[thing]') === 'stuff';
+                    }
+                },
+                {
+                    name: "nested get",
+                    test: function(){
+                        var gediTest = new gedi({thing:{stuff:{majigger:'stuff'}}});
+                        
+                        this.passed = gediTest.get('[thing/stuff/majigger]') === 'stuff';
+                    }
+                },
+                {
+                    name: "basic set",
+                    test: function(){
+                        var gediTest = new gedi();
+                        
+                        gediTest.set('[thing]', 'stuff');
+                        this.passed = gediTest.get('[thing]') === 'stuff';
+                    }
+                },
+                {
+                    name: "nested set",
+                    test: function(){
+                        var gediTest = new gedi({thing:{stuff:{majigger:'stuff'}}});
+                        
+                        gediTest.set('[thing/stuff/majigger]', 'things');
+                        this.passed = gediTest.get('[thing/stuff/majigger]') === 'things';
+                    }
+                },
+                {
+                    name: "tree creation",
+                    test: function(){
+                        var gediTest = new gedi();
+                        
+                        gediTest.set('[thing/stuff/majigger]', 'things');
+                        this.passed = gediTest.get('[thing/stuff/majigger]') === 'things';
+                    }
+                },
+                {
+                    name: "basic bind",
+                    test: function(){
+                        var gediTest = new gedi();
+                        
+                        gediTest.set('[thing]', 'things');
+                        gediTest.bind('[thing]', function(){
+                            this.passed = true;
+                        });
+                        gediTest.set('[thing]', 'stuff');
+                    }
+                }
+            ];
+            
+            var resultsElement = document.getElementsByClassName('results')[0];
 
-wdrp.init({
-    thing:1
-});
+            function runTests(){
+                for(var i = 0; i < tests.length; i++){
+                    var test = tests[i],
+                        resultElement = document.createElement('div');
+                    
+                    test.test.call(test);
+                    
+                    resultElement.innerText = test.name + ' ' + (test.passed && 'passed' || 'failed');
+                    
+                    resultsElement.appendChild(resultElement);
+                }
+            }
+            
+            runTests();
+        
+        };
 
-wdrp.bind('[thing]', myCallback);
-
-</script>
+        </script>
+    </head>
+    <body>
+        <div class="results"></div>
+    </body>
+</html>

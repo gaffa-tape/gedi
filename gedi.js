@@ -10,733 +10,18 @@
     "use strict";
 
     //Create gedi
-    var gedi = window.gedi = window.gedi || newGedi(),
-        gel = window.gel,
-        history = window.History || window.history; //Allow custom history implementations if defined.
+    var gedi = window.gedi = window.gedi || newGedi,
+        Gel = window.Gel;
 
     //"constants"
     gedi.pathSeparator = "/";
-    gedi.upALevel =  "..";
+    gedi.upALevel = "..";
     gedi.relativePath = "~";
     gedi.pathStart = "[";
     gedi.pathEnd = "]";
     gedi.pathWildcard = "*";
-    
-    //internal varaibles
-    
-        // Storage for the applications model 
-    var internalModel = {},
-
-        // Storage for model event handles
-        internalBindings = [],
-        
-        // Storage for tracking the sirty state of the model
-        dirtyModel = {},
-
-        // Storage for the memoised version of the model *CURRENTLY NOT IN USE*
-        memoisedModel = {},
-        
-        // Whether model events are paused
-        eventsPaused = false;
-        
-
-    //internal functions
-
-    //***********************************************
-    //
-    //      IE indexOf polyfill
-    //
-    //***********************************************
-
-    //IE Specific idiocy
-
-    Array.prototype.indexOf = Array.prototype.indexOf || function(object) {
-        this.fastEach(function(value, index) {
-            if (value === object) {
-                return index;
-            }
-        });
-    };
-    
-    // http://stackoverflow.com/questions/498970/how-do-i-trim-a-string-in-javascript
-    String.prototype.trim=String.prototype.trim||function(){return this.replace(/^\s\s*/, '').replace(/\s\s*$/, '');};
-
-    // http://perfectionkills.com/instanceof-considered-harmful-or-how-to-write-a-robust-isarray/
-    Array.isArray = Array.isArray || function(obj){
-        return Object.prototype.toString.call(obj) === '[object Array]';
-    };
-
-    //End IE land.
 
 
-    //***********************************************
-    //
-    //      Array Fast Each
-    //
-    //***********************************************
-
-    Array.prototype.fastEach = Array.prototype.fastEach  || function (callback) {
-        for (var i = 0; i < this.length; i++) {
-            if(callback(this[i], i, this)) break;
-        }
-        return this;
-    };
-    
-        
-    //***********************************************
-    //
-    //      Path token converter
-    //
-    //***********************************************
-    
-    function detectPathToken(expression) {
-        if (expression.charAt(0) === '[') {
-            var index = 1,
-                escapes = 0;
-            do {
-                if (expression.charAt(index) === '\\' && (expression.charAt(index+1) === '[' || expressioncharAt(index+1) === ']')) {
-                    expression = expression.slice(0, index) + expression.slice(index + 1);
-                    index++;
-                    escapes++;
-                }
-                else {
-                    index++;
-                }
-            } while (expression.charAt(index) !== ']' && index < expression.length);
-
-            if (index > 1) {
-            var value = expression.slice(0, index + 1);
-                return {
-                value: value,
-                    index: index + escapes + 1,
-                callback: function(value, scopedVariables) {
-                    return get(Path.parse(scopedVariables._gediModelContext_).append(value), internalModel);
-                    }
-                };
-            }
-        }
-    }
-
-    //***********************************************
-    //
-    //      Gel integration
-    //
-    //***********************************************
-
-    if(gel){
-        gel.tokenConverters.others.path = detectPathToken;
-        
-        gel.functions.isDirty = isDirty;
-        
-        gel.functions.getAllDirty = function(path){
-            var path = Path.parse(this._gediModelContext_).append(path),
-                source = gedi.get(path),
-                result,
-                itemPath
-            if(source == null){
-                return null;
-            }
-            
-            result = source.constructor();
-            
-            for(var key in source){
-                if(source.hasOwnProperty(key)){
-                    itemPath = path.append(gedi.relativePath + gedi.pathSeparator + key);
-                    if(result instanceof Array){
-                        isDirty(itemPath) && result.push(source[key]);
-                    }else{
-                        isDirty(itemPath) && (result[key] = source[key]);
-                    }
-                }
-            }
-            
-            return result;
-        };
-    }
-
-    //***********************************************
-    //
-    //      Get
-    //
-    //***********************************************
-    
-    
-    // Lots of similarities between get and set, refactor later to reuse code.
-    function get(path, model) {
-        if (path) {
-                        
-            var reference = model;
-
-            path = Path.parse(path);
-            
-            path.fastEach(function(key, index){
-                if (reference === null || reference === undefined) {
-                    return true;
-                } else if (typeof reference[key] === "object") {
-                    reference = reference[key];
-
-                    /*
-                    else if there isn't anything at this key, exit the loop,
-                    and return undefined.
-                    */
-                }
-                else if (reference[key] === undefined) {
-                    reference = undefined;
-                    return true;
-
-                    /*
-                    otherwise, we're at the end of the line. return whatever's
-                    there
-                    */
-                }
-                else {
-                    reference = reference[key];
-                    return true;
-                }
-            });
-            
-            return reference;
-        }
-        return model;
-    }
-    
-
-    //***********************************************
-    //
-    //      Set
-    //
-    //***********************************************
-
-    function set(path, value, model) {
-        //passed a null or undefined path, do nothing.
-        if(!path){
-            return;
-        }
-        
-        //If you just pass in an object, you are overwriting the model.
-        if (typeof path === "object" && !(path instanceof Path) && !(path instanceof Expression)) {
-            for (var modelProp in model) {
-                delete model[modelProp];
-                gedi.trigger(modelProp);
-            }
-            for (var pathProp in path) {
-                model[pathProp] = path[pathProp];
-                gedi.trigger(new Path(pathProp), model[pathProp]);
-            }
-            return;
-        }
-        
-        path = Path.parse(path);
-
-        var reference = model;
-
-        path.fastEach(function (key, index, path) {
-            
-            //if we have hit a non-object property on the reference and we have more keys after this one
-            //make an object (or array) here and move on.
-            if ((typeof reference[key] !== "object" || reference[key] === null) && index < path.length - 1) {
-                if (!isNaN(key)) {
-                    reference[key] = [];
-                }
-                else {
-                    reference[key] = {};
-                }
-            }
-            if (index === path.length - 1) {
-                // if we are at the end of the line, set to the model
-                reference[key] = value;
-                }
-            //otherwise, RECURSANIZE!
-            else {
-                reference = reference[key];
-            }
-        });
-
-        //memoisedModel[model] = {};
-
-        gedi.trigger(path);
-    }
-
-    //***********************************************
-    //
-    //      Remove
-    //
-    //***********************************************
-
-    function remove(path, model) {
-        var reference = model;
-
-        path = Path.parse(path);
-        
-        path.fastEach(function (key, index, path) {
-            //if we have hit a non-object and we have more keys after this one,
-            //return
-            if (typeof reference[key] !== "object" && index < path.length - 1) {
-                // Break out of the fastEach loop
-                return true;
-            }
-            if (index === path.length - 1) {
-                // if we are at the end of the line, delete the last key
-                
-                if (!isNaN(reference.length)) {
-                    reference.splice(key, 1);
-                }else{
-                    delete reference[key];
-                }
-            }
-            //otherwise, RECURSANIZE!
-            else {
-                reference = reference[key];
-            }
-        });
-
-        memoisedModel[model] = {};
-
-        gedi.trigger(path);
-    }
-
-    //***********************************************
-    //
-    //      Trigger Binding
-    //
-    //***********************************************
-
-    function triggerBinding(path, modelChangeEvent) {
-        if(eventsPaused){
-            return;
-        }
-            
-        path = Path.parse(path);
-
-        var reference = internalBindings,
-            references = [];
-
-        modelChangeEvent = modelChangeEvent || {
-            target: path
-        };
-
-        function triggerListeners(reference, sink){
-            if (reference != undefined && reference !== null) {
-                reference.fastEach(function (callback) {
-                    
-                    callback(modelChangeEvent);
-                    
-                });
-                if(sink){
-                    for (var key in reference) {
-                        if (reference.hasOwnProperty(key) && Array.isArray(reference[key])) {                            
-                            triggerListeners(reference[key],sink);
-                        }
-                    }
-                }
-            }
-        }
-
-        path.fastEach(function (key) {
-
-            if (!isNaN(key) || Array.prototype.hasOwnProperty(key)) {
-                key = "_" + key;
-            }
-
-            if (reference !== undefined && reference !== null) {
-                reference = reference[key];
-                references.push(reference);
-            }
-        });
-
-        triggerListeners(references.pop(), true);
-
-        while(references.length){
-            var reference = references.pop();
-                
-            triggerListeners(reference);
-        }
-    }
-    
-    //***********************************************
-    //
-    //      Pause Model Events
-    //
-    //***********************************************
-    
-    function pauseModelEvents(){
-        eventsPaused = true;
-    }
-
-    //***********************************************
-    //
-    //      Resume Model Events
-    //
-    //***********************************************
-        
-    function resumeModelEvents(){
-        eventsPaused = false;
-    }
-
-    //***********************************************
-    //
-    //      Set Binding
-    //
-    //***********************************************
-
-    function setBinding(binding, callback) {
-    
-        var path,
-            reference = internalBindings;
-    
-        //If the binding has opperators in it, break them apart and set them individually.
-        if(!(binding instanceof Path)){
-            var paths = Expression.parse(binding).paths;
-                
-            paths.fastEach(function (path) {
-                setBinding(path, callback);
-            });
-            return;
-        }
-
-        path = binding;
-
-        path.fastEach(function (key, index, path) {
-            
-            //escape properties of the array with an underscore.
-            // numbers mean a binding has been set on an array index.
-            // array property bindings like length can also be set, and thats why all array properties are escaped.
-            if (!isNaN(key) || [].hasOwnProperty(key)) {
-                key = "_" + key;
-            }
-
-            //if we have more keys after this one
-            //make an array here and move on.
-            if (typeof reference[key] !== "object" && index < path.length - 1) {
-                reference[key] = [];
-                reference = reference[key];
-            }
-            else if (index === path.length - 1) {
-                // if we are at the end of the line, add the callback
-                reference[key] = reference[key] || [];
-                reference[key].push(callback);
-            }
-            //otherwise, RECURSANIZE! (ish...)
-            else {
-                reference = reference[key];
-            }
-        });
-    }
-
-    
-    //***********************************************
-    //
-    //      Get Paths
-    //
-    //***********************************************
-              
-    function getPathsInExpression(exp){
-        var paths = [],
-            expressionString = exp instanceof Expression ? exp.original : exp;
-            
-        if(gel){
-            var tokens = gel.getTokens(expressionString, 'path');
-            tokens.fastEach(function(token){
-                paths.push(Path.parse(token.value));
-            });
-        }else{
-            return [expressionString];
-        }
-        return paths;
-    }
-    
-    //***********************************************
-    //
-    //      Path to Raw
-    //
-    //***********************************************
-    
-    function pathToRaw(path){
-        return path && path.slice(1,-1);
-    }
-    
-    //***********************************************
-    //
-    //      Raw To Path
-    //
-    //***********************************************
-    
-    function rawToPath(rawPath){
-        return gedi.pathStart + rawPath + gedi.pathEnd;
-    }
-    
-    //***********************************************
-    //
-    //      Get Absolute Path
-    //
-    //***********************************************
-    
-    function getAbsolutePath(){
-        var args = Array.prototype.slice.call(arguments),
-            absoluteParts = [];            
-            
-        args.fastEach(function(path){
-            path = Path.parse(path);
-        
-            path.fastEach(function(pathPart, partIndex, parts){
-        
-                if(pathPart === gedi.upALevel){
-                // Up a level? Remove the last item in absoluteParts
-                    absoluteParts.pop();
-                    
-                }else if(pathPart === gedi.relativePath){
-                // Relative path? Do nothing
-                    return;
-                    
-                }else if(pathPart === '' && parts.length > 1){
-                // more than 1 part beginning with a pathSeparator? Reset absoluteParts to root.
-                    absoluteParts = [];
-                    
-                }else if(partIndex){
-                // any following valid part? Add it to the absoluteParts.
-                    absoluteParts.push(pathPart);
-                    
-                }else{
-                // Absolute path, clear the current absoluteParts
-                    absoluteParts = [pathPart];
-                    
-        }
-            });
-        });
-        
-        // Convert the absoluteParts to a Path.
-        return new Path(absoluteParts);
-    }
-        
-    //***********************************************
-    //
-    //      Model Get
-    //
-    //***********************************************
-    
-    function modelGet (binding, parentPath) {
-        if(binding && gel){
-            var gelResult,
-                expression = binding,
-                context = {
-                    "_gediModelContext_": parentPath
-                };
-                
-            if(binding instanceof Path || binding instanceof Expression){
-                expression = binding.toString();
-            }
-            
-            gelResult = gel.parse(expression, context);
-            
-            return gelResult;
-        }
-        if(parentPath){
-            binding = getAbsolutePath(parentPath, binding);
-        }
-        return get(binding, internalModel);
-    }  
-        
-    //***********************************************
-    //
-    //      Set Dirty State
-    //
-    //***********************************************  
-    
-    function setDirtyState(path, dirty){
-        var reference = dirtyModel;
-        
-        dirty = dirty !== false;
-        
-        path = Path.parse(path);
-        
-        path.fastEach(function(key, index){
-            if ((typeof reference[key] !== "object" || reference[key] === null) && index < path.length - 1) {
-                reference[key] = {};
-            }
-            if (index === path.length - 1) {
-                reference[key] = {};
-                reference[key]['_isDirty_'] = dirty;
-            }
-            else {
-                reference = reference[key];
-            }
-        });
-    }
-        
-    //***********************************************
-    //
-    //      Is Dirty
-    //
-    //***********************************************  
-    
-    function isDirty(path){
-        var reference,
-            hasDirtyChildren = function(ref){ 
-                if(typeof ref !== 'object'){
-                    return false;
-                }
-                if(ref['_isDirty_']){
-                    return true;
-                }else{
-                    for(var key in ref){
-                        if(hasDirtyChildren(ref[key])){
-                            return true;
-                        }
-                    }
-                }
-            };
-        
-        path = Path.parse(path);
-        
-        reference = get(path, dirtyModel);
-        
-        return !!hasDirtyChildren(reference);
-    }
-
-    //Public Objects ******************************************************************************
-    
-    // IE7 is a pile of shit and won't let you inherit from arrays.
-    function inheritFromArray(){      
-        inheritFromArray.canInherit = inheritFromArray.canInherit || (function(){
-            function ie7Test(){}
-            ie7Test.prototype = new Array();
-            var instance = new ie7Test();
-            instance.push(1);
-            return instance.length === 1;
-        })();
-    
-        if(inheritFromArray.canInherit){
-            return new Array();
-        }else{
-            var tempPrototype = {};
-            for(var key in []){
-                tempPrototype[key] = [][key];
-            }
-            //from jQuery
-            tempPrototype.length = 0;
-            tempPrototype.pop = [].pop;
-            tempPrototype.push = [].push;
-            tempPrototype.slice = [].slice;
-            tempPrototype.splice = [].splice;
-            tempPrototype.join = [].join;
-            tempPrototype.indexOf = [].indexOf;
-            // add fastEach
-            tempPrototype.fastEach = [].fastEach;
-            return tempPrototype;
-        }
-    }
-    
-    //***********************************************
-    //
-    //      Path Object
-    //
-    //***********************************************
-    
-    function Path(path){
-        var self = this,
-            absolute = false;
-        
-        //Passed a Path? pass it back.
-        if(path instanceof Path){
-            return path.slice();
-        }
-        
-        //passed a string or array? make a new Path.
-        if(typeof path === "string"){
-            if(path.charAt(0)===gedi.pathStart){
-                path = pathToRaw(path);
-            }
-            var keys = path.split(gedi.pathSeparator);
-            keys.fastEach(function (key) {
-                self.push(key);
-            });
-        }else if(path instanceof Array){
-            path.fastEach(function (key) {
-                self.push(key);
-            });
-        }
-        
-        self.original = path;
-    }
-    Path.prototype = inheritFromArray();
-    Path.prototype.toString = function(){
-        var str = this.join(gedi.pathSeparator);
-        return str && rawToPath(str) || undefined;
-    };
-    Path.prototype.toRawString = function(){
-        return this.join(gedi.pathSeparator);
-    };
-    Path.prototype.slice = function (){
-        return new Path(Array.prototype.slice.apply(this, arguments));
-    };
-    Path.prototype.splice = function (){
-        return new Path(Array.prototype.splice.apply(this, arguments));
-    };
-    Path.prototype.append = function(){
-        var args = Array.prototype.slice.call(arguments),
-            newPath = this.slice();
-            
-        return getAbsolutePath.apply(this, [this].concat(args));
-    };
-    Path.prototype.last = function(){
-        return this[this.length-1];
-    };
-    Path.parse = function(path){
-    
-        if(path instanceof Expression){
-        // Check if the passed in path is an Expression, that is also just a Path.
-        
-            var detectedPathToken = detectPathToken(path.original);
-            
-            if(detectedPathToken.index === path.original.length){
-                path = new Path(detectedPathToken.value);
-            }else{
-                console.warn('could not parse Expression directly to Path');
-            }
-        }
-        
-        return path instanceof this && path || new Path(path);
-    };
-    Path.mightParse = function(path){    
-        return path instanceof this || path instanceof Expression || typeof path === 'string' || Array.isArray(path);
-    };
-    
-    //***********************************************
-    //
-    //      Expression Object
-    //
-    //***********************************************
-    
-    function Expression(expression){
-        var self = this,
-            absolute = false;
-        
-        //Passed an Expression? pass it back.
-        if(expression instanceof Expression){
-            return expression;
-        }
-        
-        //passed a string or array? make a new Expression.
-        if(typeof expression === "string"){
-            var tokens = gel.tokenise(expression);
-            tokens.fastEach(function (key) {
-                self.push(key);
-            });
-        }
-        
-        self.original = expression;
-        
-        self.paths = getPathsInExpression(self);
-    }
-    Expression.prototype = inheritFromArray();
-    Expression.prototype.toString = function(){
-        return this.original;
-    };
-    Expression.parse = function(expression){        
-        expression instanceof Path && (expression = expression.toString());
-        
-        return expression instanceof this && expression || new Expression(expression);
-    };
 
     //***********************************************
     //
@@ -744,61 +29,795 @@
     //
     //***********************************************
 
-    //Creates the public gedi object
-    //ToDo: remove anonymous functions from here, make it just references to named functions.
-    function newGedi() {
+    //Creates the public gedi constructor
+    function newGedi(model) {
+            
+        // Storage for the applications model 
+        model = model || {};
 
-        function innerGedi() { }
+            // Storage for model event handles
+        var internalBindings = [],
+
+            // Storage for tracking the dirty state of the model
+            dirtyModel = {},
+
+            // Whether model events are paused
+            eventsPaused = false,
+            
+            // gel instance
+            gel;
+        
+        //internal functions
+
+        //***********************************************
+        //
+        //      IE indexOf polyfill
+        //
+        //***********************************************
+
+        //IE Specific idiocy
+
+        Array.prototype.indexOf = Array.prototype.indexOf || function (object) {
+            this.fastEach(function (value, index) {
+                if (value === object) {
+                    return index;
+                }
+            });
+        };
+
+        // http://stackoverflow.com/questions/498970/how-do-i-trim-a-string-in-javascript
+        String.prototype.trim = String.prototype.trim || function () { return this.replace(/^\s\s*/, '').replace(/\s\s*$/, ''); };
+
+        // http://perfectionkills.com/instanceof-considered-harmful-or-how-to-write-a-robust-isarray/
+        Array.isArray = Array.isArray || function (obj) {
+            return Object.prototype.toString.call(obj) === '[object Array]';
+        };
+
+        //End IE land.
+
+
+        //***********************************************
+        //
+        //      Array Fast Each
+        //
+        //***********************************************
+
+        Array.prototype.fastEach = Array.prototype.fastEach || function (callback) {
+            for (var i = 0; i < this.length; i++) {
+                if (callback(this[i], i, this)) break;
+            }
+            return this;
+        };
+        
+        function pathTokenCallback(value, scopedVariables) {
+            return get(Path.parse(scopedVariables._gediModelContext_).append(value));
+        }
+
+
+        //***********************************************
+        //
+        //      Path token converter
+        //
+        //***********************************************
+
+        function detectPathToken(expression) {
+            if (expression.charAt(0) === '[') {
+                var index = 1,
+                    escapes = 0;
+                do {
+                    if (expression.charAt(index) === '\\' && (expression.charAt(index + 1) === '[' || expressioncharAt(index + 1) === ']')) {
+                        expression = expression.slice(0, index) + expression.slice(index + 1);
+                        index++;
+                        escapes++;
+                    }
+                    else {
+                        index++;
+                    }
+                } while (expression.charAt(index) !== ']' && index < expression.length);
+
+                if (index > 1) {
+                    var value = expression.slice(0, index + 1);
+                    return {
+                        value: value,
+                        index: index + escapes + 1,
+                        callback: pathTokenCallback
+                    };
+                }
+            }
+        }
+
+        //***********************************************
+        //
+        //      Gel integration
+        //
+        //***********************************************
+
+        if (Gel) {
+            gel = new Gel();
+            
+            gel.tokenConverters.others.path = detectPathToken;
+
+            gel.functions.isDirty = isDirty;
+
+            gel.functions.getAllDirty = function (path) {
+                var path = Path.parse(this._gediModelContext_).append(path),
+                    source = get(path),
+                    result,
+                    itemPath
+                if (source == null) {
+                    return null;
+                }
+
+                result = source.constructor();
+
+                for (var key in source) {
+                    if (source.hasOwnProperty(key)) {
+                        itemPath = path.append(gedi.relativePath + gedi.pathSeparator + key);
+                        if (result instanceof Array) {
+                            isDirty(itemPath) && result.push(source[key]);
+                        } else {
+                            isDirty(itemPath) && (result[key] = source[key]);
+                        }
+                    }
+                }
+
+                return result;
+            };
+        }
+
+        //***********************************************
+        //
+        //      Get
+        //
+        //***********************************************
+
+
+        // Lots of similarities between get and set, refactor later to reuse code.
+        function get(path) {
+            if (path) {
+
+                var reference = model;
+
+                path = Path.parse(path);
+
+                path.fastEach(function (key, index) {
+                    if (reference === null || reference === undefined) {
+                        return true;
+                    } else if (typeof reference[key] === "object") {
+                        reference = reference[key];
+
+                    /*
+                    else if there isn't anything at this key, exit the loop,
+                    and return undefined.
+                    */
+                    }
+                    else if (reference[key] === undefined) {
+                        reference = undefined;
+                        return true;
+
+                    /*
+                    otherwise, we're at the end of the line. return whatever's
+                    there
+                    */
+                    }
+                    else {
+                        reference = reference[key];
+                        return true;
+                    }
+                });
+
+                return reference;
+            }
+            return model;
+        }
+
+
+        //***********************************************
+        //
+        //      Set
+        //
+        //***********************************************
+
+        function set(path, value, dirty) {
+            
+            //passed a null or undefined path, do nothing.
+            if (!path) {
+                return;
+            }
+            
+            if (Path.mightParse(path)) {
+                setDirtyState(path, dirty);
+            }
+
+            //If you just pass in an object, you are overwriting the model.
+            if (typeof path === "object" && !(path instanceof Path) && !(path instanceof Expression)) {
+                for (var modelProp in model) {
+                    delete model[modelProp];
+                    trigger(modelProp);
+                }
+                for (var pathProp in path) {
+                    model[pathProp] = path[pathProp];
+                    trigger(new Path(pathProp), model[pathProp]);
+                }
+                return;
+            }
+
+            path = Path.parse(path);
+
+            var reference = model;
+
+            path.fastEach(function (key, index, path) {
+
+                //if we have hit a non-object property on the reference and we have more keys after this one
+                //make an object (or array) here and move on.
+                if ((typeof reference[key] !== "object" || reference[key] === null) && index < path.length - 1) {
+                    if (!isNaN(key)) {
+                        reference[key] = [];
+                    }
+                    else {
+                        reference[key] = {};
+                    }
+                }
+                if (index === path.length - 1) {
+                    // if we are at the end of the line, set to the model
+                    reference[key] = value;
+                }
+                    //otherwise, RECURSANIZE!
+                else {
+                    reference = reference[key];
+                }
+            });
+
+            trigger(path);
+        }
+
+        //***********************************************
+        //
+        //      Remove
+        //
+        //***********************************************
+
+        function remove(path, dirty) {
+            var reference;
+            
+            if (Path.mightParse(path)) {
+                setDirtyState(path, false, dirty);
+            }        
+        
+            reference = model;
+
+            path = Path.parse(path);
+
+            path.fastEach(function (key, index, path) {
+                //if we have hit a non-object and we have more keys after this one,
+                //return true to break out of the fastEach loop.
+                if (typeof reference[key] !== "object" && index < path.length - 1) {
+                    return true;
+                }
+                if (index === path.length - 1) {
+                    // if we are at the end of the line, delete the last key
+
+                    if (!isNaN(reference.length)) {
+                        reference.splice(key, 1);
+                    } else {
+                        delete reference[key];
+                    }
+                }
+                    //otherwise, RECURSANIZE!
+                else {
+                    reference = reference[key];
+                }
+            });
+
+            trigger(path);
+        }
+
+        //***********************************************
+        //
+        //      Trigger Binding
+        //
+        //***********************************************
+
+        function trigger(path, modelChangeEvent) {
+            if (eventsPaused) {
+                return;
+            }
+
+            path = Path.parse(path);
+
+            var reference = internalBindings,
+                references = [];
+
+            modelChangeEvent = modelChangeEvent || {
+                target: path
+            };
+
+            function triggerListeners(reference, sink) {
+                if (reference != undefined && reference !== null) {
+                    reference.fastEach(function (callback) {
+
+                        callback(modelChangeEvent);
+
+                    });
+                    if (sink) {
+                        for (var key in reference) {
+                            if (reference.hasOwnProperty(key) && Array.isArray(reference[key])) {
+                                triggerListeners(reference[key], sink);
+                            }
+                        }
+                    }
+                }
+            }
+
+            path.fastEach(function (key) {
+
+                if (!isNaN(key) || Array.prototype.hasOwnProperty(key)) {
+                    key = "_" + key;
+                }
+
+                if (reference !== undefined && reference !== null) {
+                    reference = reference[key];
+                    references.push(reference);
+                }
+            });
+
+            triggerListeners(references.pop(), true);
+
+            while (references.length) {
+                var reference = references.pop();
+
+                triggerListeners(reference);
+            }
+        }
+
+        //***********************************************
+        //
+        //      Pause Model Events
+        //
+        //***********************************************
+
+        function pauseModelEvents() {
+            eventsPaused = true;
+        }
+
+        //***********************************************
+        //
+        //      Resume Model Events
+        //
+        //***********************************************
+
+        function resumeModelEvents() {
+            eventsPaused = false;
+        }
+
+        //***********************************************
+        //
+        //      Set Binding
+        //
+        //***********************************************
+
+        function setBinding(binding, callback) {
+
+            var path,
+                reference = internalBindings;
+
+            //If the binding has opperators in it, break them apart and set them individually.
+            if (!(binding instanceof Path)) {
+                var paths = Expression.parse(binding).paths;
+
+                paths.fastEach(function (path) {
+                    setBinding(path, callback);
+                });
+                return;
+            }
+
+            path = binding;
+
+            path.fastEach(function (key, index, path) {
+
+                //escape properties of the array with an underscore.
+                // numbers mean a binding has been set on an array index.
+                // array property bindings like length can also be set, and thats why all array properties are escaped.
+                if (!isNaN(key) || [].hasOwnProperty(key)) {
+                    key = "_" + key;
+                }
+
+                //if we have more keys after this one
+                //make an array here and move on.
+                if (typeof reference[key] !== "object" && index < path.length - 1) {
+                    reference[key] = [];
+                    reference = reference[key];
+                }
+                else if (index === path.length - 1) {
+                    // if we are at the end of the line, add the callback
+                    reference[key] = reference[key] || [];
+                    reference[key].push(callback);
+                }
+                    //otherwise, RECURSANIZE! (ish...)
+                else {
+                    reference = reference[key];
+                }
+            });
+        }
+
+
+        //***********************************************
+        //
+        //      Get Paths
+        //
+        //***********************************************
+
+        function getPathsInExpression(exp) {
+            var paths = [],
+                expressionString = exp instanceof Expression ? exp.original : exp;
+
+            if (gel) {
+                var tokens = gel.getTokens(expressionString, 'path');
+                tokens.fastEach(function (token) {
+                    paths.push(Path.parse(token.value));
+                });
+            } else {
+                return [expressionString];
+            }
+            return paths;
+        }
+
+        //***********************************************
+        //
+        //      Path to Raw
+        //
+        //***********************************************
+
+        function pathToRaw(path) {
+            return path && path.slice(1, -1);
+        }
+
+        //***********************************************
+        //
+        //      Raw To Path
+        //
+        //***********************************************
+
+        function rawToPath(rawPath) {
+            return gedi.pathStart + rawPath + gedi.pathEnd;
+        }
+
+        //***********************************************
+        //
+        //      Get Absolute Path
+        //
+        //***********************************************
+
+        function getAbsolutePath() {
+            var args = Array.prototype.slice.call(arguments),
+                absoluteParts = [];
+
+            args.fastEach(function (path) {
+                path = Path.parse(path);
+
+                path.fastEach(function (pathPart, partIndex, parts) {
+
+                    if (pathPart === gedi.upALevel) {
+                        // Up a level? Remove the last item in absoluteParts
+                        absoluteParts.pop();
+
+                    } else if (pathPart === gedi.relativePath) {
+                        // Relative path? Do nothing
+                        return;
+
+                    } else if (pathPart === '' && parts.length > 1) {
+                        // more than 1 part beginning with a pathSeparator? Reset absoluteParts to root.
+                        absoluteParts = [];
+
+                    } else if (partIndex) {
+                        // any following valid part? Add it to the absoluteParts.
+                        absoluteParts.push(pathPart);
+
+                    } else if (pathPart.indexOf(gedi.relativePath) === 0) {
+                        //***********************************************
+                        //
+                        //      ToDo: LEGACY CODE SUPPORT. PHAZE OUT FOR 0.2.0
+                        //
+                        //      relative paths without the dividing slash eg: ~thing
+                        //
+                        //***********************************************
+                        absoluteParts.push(pathPart.slice(1));
+
+                    } else if (pathPart.indexOf(gedi.upALevel) === 0) {
+                        //***********************************************
+                        //
+                        //      ToDo: LEGACY CODE SUPPORT. PHAZE OUT FOR 0.2.0
+                        //
+                        //      up a level paths without the dividing slash eg: ..thing
+                        //
+                        //***********************************************
+                        absoluteParts.pop();
+                        absoluteParts.push(pathPart.slice(2));
+
+                    } else {
+                        // Absolute path, clear the current absoluteParts
+                        absoluteParts = [pathPart];
+
+                    }
+                });
+            });
+
+            // Convert the absoluteParts to a Path.
+            return new Path(absoluteParts);
+        }
+
+        //***********************************************
+        //
+        //      Model Get
+        //
+        //***********************************************
+
+        function gelGet(binding, parentPath) {
+            if (binding && gel) {
+                var gelResult,
+                    expression = binding,
+                    context = {
+                        "_gediModelContext_": parentPath
+                    };
+
+                if (binding instanceof Path || binding instanceof Expression) {
+                    expression = binding.toString();
+                }
+
+                gelResult = gel.parse(expression, context);
+
+                return gelResult;
+            }
+            if (parentPath) {
+                binding = getAbsolutePath(parentPath, binding);
+            }
+            return get(binding);
+        }
+
+        //***********************************************
+        //
+        //      Set Dirty State
+        //
+        //***********************************************  
+
+        function setDirtyState(path, dirty) {
+            var reference = dirtyModel;
+
+            dirty = dirty !== false;
+
+            path = Path.parse(path);
+
+            path.fastEach(function (key, index) {
+                if ((typeof reference[key] !== "object" || reference[key] === null) && index < path.length - 1) {
+                    reference[key] = {};
+                }
+                if (index === path.length - 1) {
+                    reference[key] = {};
+                    reference[key]['_isDirty_'] = dirty;
+                }
+                else {
+                    reference = reference[key];
+                }
+            });
+        }
+
+        //***********************************************
+        //
+        //      Is Dirty
+        //
+        //***********************************************  
+
+        function isDirty(path) {
+            var reference,
+                hasDirtyChildren = function (ref) {
+                    if (typeof ref !== 'object') {
+                        return false;
+                    }
+                    if (ref['_isDirty_']) {
+                        return true;
+                    } else {
+                        for (var key in ref) {
+                            if (hasDirtyChildren(ref[key])) {
+                                return true;
+                            }
+                        }
+                    }
+                };
+
+            path = Path.parse(path);
+
+            reference = get(path, dirtyModel);
+
+            return !!hasDirtyChildren(reference);
+        }
+
+        //Public Objects ******************************************************************************
+
+        // IE7 is a pile of shit and won't let you inherit from arrays.
+        function inheritFromArray() {
+            inheritFromArray.canInherit = inheritFromArray.canInherit || (function () {
+                function ie7Test() { }
+                ie7Test.prototype = new Array();
+                var instance = new ie7Test();
+                instance.push(1);
+                return instance.length === 1;
+            })();
+
+            if (inheritFromArray.canInherit) {
+                return new Array();
+            } else {
+                var tempPrototype = {};
+                for (var key in []) {
+                    tempPrototype[key] = [][key];
+                }
+                //from jQuery
+                tempPrototype.length = 0;
+                tempPrototype.pop = [].pop;
+                tempPrototype.push = [].push;
+                tempPrototype.slice = [].slice;
+                tempPrototype.splice = [].splice;
+                tempPrototype.join = [].join;
+                tempPrototype.indexOf = [].indexOf;
+                // add fastEach
+                tempPrototype.fastEach = [].fastEach;
+                return tempPrototype;
+            }
+        }
+
+        //***********************************************
+        //
+        //      Path Object
+        //
+        //***********************************************
+
+        function Path(path) {
+            var self = this,
+                absolute = false;
+
+            //Passed a Path? pass it back.
+            if (path instanceof Path) {
+                return path.slice();
+            }
+
+            //passed a string or array? make a new Path.
+            if (typeof path === "string") {
+                if (path.charAt(0) === gedi.pathStart) {
+                    path = pathToRaw(path);
+                }
+                var keys = path.split(gedi.pathSeparator);
+                keys.fastEach(function (key) {
+                    self.push(key);
+                });
+            } else if (path instanceof Array) {
+                path.fastEach(function (key) {
+                    self.push(key);
+                });
+            }
+
+            self.original = path;
+        }
+        Path.prototype = inheritFromArray();
+        Path.prototype.push = Path.prototype.push || function () {
+            Array.prototype.push.apply(this, arguments);
+            this.length++;
+        }
+        Path.prototype.pop = Path.prototype.pop || function () {
+            Array.prototype.pop.apply(this, arguments);
+            this.length--;
+        }
+        Path.prototype.toString = function () {
+            var str = this.join(gedi.pathSeparator);
+            return str && rawToPath(str) || undefined;
+        };
+        Path.prototype.toRawString = function () {
+            return this.join(gedi.pathSeparator);
+        };
+        Path.prototype.slice = function () {
+            return new Path(Array.prototype.slice.apply(this, arguments));
+        };
+        Path.prototype.splice = function () {
+            return new Path(Array.prototype.splice.apply(this, arguments));
+        };
+        Path.prototype.append = function () {
+            var args = Array.prototype.slice.call(arguments),
+                newPath = this.slice();
+
+            return getAbsolutePath.apply(this, [this].concat(args));
+        };
+        Path.prototype.last = function () {
+            return this[this.length - 1];
+        };
+        Path.parse = function (path) {
+
+            if (path instanceof Expression) {
+                // Check if the passed in path is an Expression, that is also just a Path.
+
+                var detectedPathToken = detectPathToken(path.original);
+
+                if (detectedPathToken.index === path.original.length) {
+                    path = new Path(detectedPathToken.value);
+                } else {
+                    console.warn('could not parse Expression directly to Path');
+                }
+            }
+
+            return path instanceof this && path || new Path(path);
+        };
+        Path.mightParse = function (path) {
+            return path instanceof this || path instanceof Expression || typeof path === 'string' || Array.isArray(path);
+        };
+
+        //***********************************************
+        //
+        //      Expression Object
+        //
+        //***********************************************
+
+        function Expression(expression) {
+            var self = this,
+                absolute = false;
+
+            //Passed an Expression? pass it back.
+            if (expression instanceof Expression) {
+                return expression;
+            }
+
+            //passed a string or array? make a new Expression.
+            if (typeof expression === "string") {
+                var tokens = gel.tokenise(expression);
+                tokens.fastEach(function (key) {
+                    self.push(key);
+                });
+            }
+
+            self.original = expression;
+
+            self.paths = getPathsInExpression(self);
+        }
+        Expression.prototype = inheritFromArray();
+        Expression.prototype.toString = function () {
+            return this.original;
+        };
+        Expression.parse = function (expression) {
+            expression instanceof Path && (expression = expression.toString());
+
+            return expression instanceof this && expression || new Expression(expression);
+        };
+
+        function innerGedi() {
+            
+        }
 
         innerGedi.prototype = {
             Path: Path,
             Expression: Expression,
-            
-            utils:{
-                get:get,
-                set:set
-            },
-            
-        
+
+
             // *************************************************************************
             // DO NOT USE THIS API.
             // If you are using this, you are almost definitally doing something wrong.
             pauseEvents: pauseModelEvents,
             resumeEvents: resumeModelEvents,
             // *************************************************************************
-                            
-            get: modelGet,
 
-            set: function (path, value, dirty) {
-                if(Path.mightParse(path)){                  
-                    
-                    setDirtyState(path, dirty);
-                }
-                
-                set(path, value, internalModel);
-            },
+            get: gelGet,
+
+            set: set,
 
             init: function (model) {
                 this.set(model);
-                this.setDirtyState("",false);
+                this.setDirtyState("", false);
             },
-            
-            remove: function (path, dirty) {
-                if(Path.mightParse(path)){
-                    
-                    setDirtyState(path, false, dirty);
-                }
-                
-                remove(path, internalModel);
-            },
+
+            remove: remove,
 
             bind: setBinding,
 
-            trigger: triggerBinding,
-            
+            trigger: trigger,
+
             isDirty: isDirty,
-            
-            setDirtyState: function(path, dirty){                    
+
+            setDirtyState: function (path, dirty) {
                 return setDirtyState(path, dirty);
             }
         };
