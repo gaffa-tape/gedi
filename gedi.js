@@ -15,7 +15,7 @@
     //"constants"
     gedi.pathSeparator = "/";
     gedi.upALevel = "..";
-    gedi.relativePath = "~";
+    gedi.rootPath = "";
     gedi.pathStart = "[";
     gedi.pathEnd = "]";
     gedi.pathWildcard = "*";
@@ -89,7 +89,7 @@
         };
         
         function pathTokenCallback(value, scopedVariables) {
-            return get(Path.parse(scopedVariables._gediModelContext_).append(value));
+            return get(Path.parse(scopedVariables._gediModelContext_).append(value), model);
         }
 
 
@@ -151,7 +151,7 @@
 
                 for (var key in source) {
                     if (source.hasOwnProperty(key)) {
-                        itemPath = path.append(gedi.relativePath + gedi.pathSeparator + key);
+                        itemPath = path.append(key);
                         if (result instanceof Array) {
                             isDirty(itemPath) && result.push(source[key]);
                         } else {
@@ -172,7 +172,7 @@
 
 
         // Lots of similarities between get and set, refactor later to reuse code.
-        function get(path) {
+        function get(path, model) {
             if (path) {
 
                 var reference = model;
@@ -217,12 +217,7 @@
         //
         //***********************************************
 
-        function set(path, value, parentPath, dirty) {
-            if(parentPath instanceof Boolean){
-                dirty = parentPathOrDirty;
-                parentPath = undefined;
-            }
-                
+        function set(path, value) {
             //passed a null or undefined path, do nothing.
             if (!path) {
                 return;
@@ -244,14 +239,6 @@
             }
 
             path = Path.parse(path);  
-            
-            if(parentPath){
-                path = new Path(parentPath).append(path);
-            }                      
-            
-            if (Path.mightParse(path)) {
-                setDirtyState(path, dirty);
-            }
 
             var reference = model;
 
@@ -502,7 +489,9 @@
                 absoluteParts = [];
 
             args.fastEach(function (path) {
-                path = Path.parse(path);
+                if(!(path instanceof Path)){
+                    path = Path.parse(path);
+                }
 
                 path.fastEach(function (pathPart, partIndex, parts) {
 
@@ -510,42 +499,13 @@
                         // Up a level? Remove the last item in absoluteParts
                         absoluteParts.pop();
 
-                    } else if (pathPart === gedi.relativePath) {
-                        // Relative path? Do nothing
-                        return;
-
-                    } else if (pathPart === '' && parts.length > 1) {
-                        // more than 1 part beginning with a pathSeparator? Reset absoluteParts to root.
+                    } else if (pathPart === gedi.rootPath) {
+                        // Root path? Do nothing
                         absoluteParts = [];
 
-                    } else if (partIndex) {
+                    } else {
                         // any following valid part? Add it to the absoluteParts.
                         absoluteParts.push(pathPart);
-
-                    } else if (pathPart.indexOf(gedi.relativePath) === 0) {
-                        //***********************************************
-                        //
-                        //      ToDo: LEGACY CODE SUPPORT. PHAZE OUT FOR 0.2.0
-                        //
-                        //      relative paths without the dividing slash eg: ~thing
-                        //
-                        //***********************************************
-                        absoluteParts.push(pathPart.slice(1));
-
-                    } else if (pathPart.indexOf(gedi.upALevel) === 0) {
-                        //***********************************************
-                        //
-                        //      ToDo: LEGACY CODE SUPPORT. PHAZE OUT FOR 0.2.0
-                        //
-                        //      up a level paths without the dividing slash eg: ..thing
-                        //
-                        //***********************************************
-                        absoluteParts.pop();
-                        absoluteParts.push(pathPart.slice(2));
-
-                    } else {
-                        // Absolute path, clear the current absoluteParts
-                        absoluteParts = [pathPart];
 
                     }
                 });
@@ -561,7 +521,7 @@
         //
         //***********************************************
 
-        function gelGet(binding, parentPath) {
+        function modelGet(binding, parentPath) {
             if (binding && gel) {
                 var gelResult,
                     expression = binding,
@@ -580,7 +540,29 @@
             if (parentPath) {
                 binding = getAbsolutePath(parentPath, binding);
             }
-            return get(binding);
+            return get(binding, model);
+        }
+
+        //***********************************************
+        //
+        //      Model Set
+        //
+        //***********************************************
+
+        function modelSet(path, value, parentPath, dirty) {
+            if(parentPath instanceof Boolean){
+                dirty = parentPath;
+                parentPath = undefined;
+            }
+            
+            if(parentPath){
+                path = new Path(parentPath).append(path);
+            }
+            
+            if (Path.mightParse(path)) {
+                setDirtyState(path, dirty);
+            }
+            return set(path, value, model);
         }
 
         //***********************************************
@@ -809,9 +791,9 @@
             resumeEvents: resumeModelEvents,
             // *************************************************************************
 
-            get: gelGet,
+            get: modelGet,
 
-            set: set,
+            set: modelSet,
 
             init: function (model) {
                 this.set(model);
