@@ -1,8 +1,27 @@
 <!DOCTYPE html>
 <html>
     <head>
+        <style>
+            .passed h1{
+                color: #0A0;
+            }
+            .failed h1{
+                color: #A00;
+            }     
+            .result .description{
+                height:0px;
+                overflow:scroll;
+                -webkit-transition:height 0.2s linear;
+                -moz-transition:height 0.2s linear;
+                -ms-transition:height 0.2s linear;
+                transition:height 0.2s linear;
+            }
+            .result:hover .description{
+                height:200px;            
+            }
+        </style>
+        <script src="https://raw.github.com/KoryNunn/crel/master/crel.js"></script>
         <script src="gel/gel.js"></script>
-        <script src="gel/gelFunctions.js"></script>
         <script src="gedi.js"></script>
         <script>
         window.onload = function(){
@@ -54,13 +73,82 @@
                 {
                     name: "basic bind",
                     test: function(){
-                        var gediTest = new gedi();
+                        var gediTest = new gedi(),
+                            test = this;
                         
                         gediTest.set('[thing]', 'things');
                         gediTest.bind('[thing]', function(){
-                            this.passed = true;
+                            test.passed = true;
                         });
                         gediTest.set('[thing]', 'stuff');
+                    }
+                },
+                {
+                    name: "nested bind",
+                    test: function(){
+                        var gediTest = new gedi(),
+                            test = this;
+                        
+                        gediTest.set('[thing/stuff/majigger]', 'things');
+                        gediTest.bind('[thing/stuff/majigger]', function(){
+                            test.passed = true;
+                        });
+                        gediTest.set('[thing/stuff/majigger]', 'stuff');
+                    }
+                },
+                {
+                    name: "pre allocated bind",
+                    test: function(){
+                        var gediTest = new gedi(),
+                            test = this;
+                        
+                        gediTest.bind('[thing/stuff/majigger]', function(){
+                            test.passed = true;
+                        });
+                        gediTest.set('[thing/stuff/majigger]', 'stuff');
+                    }
+                },
+                {
+                    name: "relative get",
+                    test: function(){
+                        var gediTest = new gedi(),
+                            test = this;
+                        
+                        gediTest.set('[thing/stuff/majigger]', 'stuff');
+                        
+                        this.passed = gediTest.get('[~/majigger]', '[thing/stuff]') === 'stuff';
+                    }
+                },
+                {
+                    name: "relative set",
+                    test: function(){
+                        var gediTest = new gedi(),
+                            test = this;
+                        
+                        gediTest.set('[~/majigger]', 'whatsit', '[thing/stuff]');
+                        this.passed = gediTest.get('[thing/stuff/majigger]', 'whatsit');
+                    }
+                },
+                {
+                    name: "up a level get",
+                    test: function(){
+                        var gediTest = new gedi(),
+                            test = this;
+                        
+                        gediTest.set('[thing/stuff/majigger]', 'stuff');
+                        gediTest.set('[thing/whatsit]', 'things');
+                        
+                        this.passed = gediTest.get('[../whatsit]', '[thing/stuff]') === 'things';
+                    }
+                },
+                {
+                    name: "up a level set",
+                    test: function(){
+                        var gediTest = new gedi(),
+                            test = this;
+                        
+                        gediTest.set('[../whatsit]', 'whatsit', '[thing/stuff]');
+                        this.passed = gediTest.get('[thing/whatsit]', 'whatsit');
                     }
                 }
             ];
@@ -70,11 +158,17 @@
             function runTests(){
                 for(var i = 0; i < tests.length; i++){
                     var test = tests[i],
-                        resultElement = document.createElement('div');
+                        resultElement,
+                        title,
+                        description;
                     
                     test.test.call(test);
                     
-                    resultElement.innerText = test.name + ' ' + (test.passed && 'passed' || 'failed');
+                    resultElement = crel('div', {'class':(test.passed && 'passed' || 'failed') + ' result'}, (title = crel('h1')),  (description = crel('pre', {'class':'description'})));                    
+                    
+                    title.innerText = test.name + ' ' + (test.passed && 'passed' || 'failed');
+                    
+                    description.innerText = test.test.toString();
                     
                     resultsElement.appendChild(resultElement);
                 }

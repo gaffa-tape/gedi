@@ -10,8 +10,7 @@
     "use strict";
 
     //Create gedi
-    var gedi = window.gedi = window.gedi || newGedi,
-        Gel = window.Gel;
+    var gedi = window.gedi = window.gedi || newGedi;
 
     //"constants"
     gedi.pathSeparator = "/";
@@ -132,8 +131,8 @@
         //
         //***********************************************
 
-        if (Gel) {
-            gel = new Gel();
+        if (window.gel) {
+            gel = new window.gel();
             
             gel.tokenConverters.others.path = detectPathToken;
 
@@ -218,31 +217,41 @@
         //
         //***********************************************
 
-        function set(path, value, dirty) {
-            
+        function set(path, value, parentPath, dirty) {
+            if(parentPath instanceof Boolean){
+                dirty = parentPathOrDirty;
+                parentPath = undefined;
+            }
+                
             //passed a null or undefined path, do nothing.
             if (!path) {
                 return;
-            }
-            
-            if (Path.mightParse(path)) {
-                setDirtyState(path, dirty);
             }
 
             //If you just pass in an object, you are overwriting the model.
             if (typeof path === "object" && !(path instanceof Path) && !(path instanceof Expression)) {
                 for (var modelProp in model) {
                     delete model[modelProp];
+                    setDirtyState(new Path(modelProp), dirty);
                     trigger(modelProp);
                 }
                 for (var pathProp in path) {
                     model[pathProp] = path[pathProp];
+                    setDirtyState(new Path(pathProp), dirty);
                     trigger(new Path(pathProp), model[pathProp]);
                 }
                 return;
             }
 
-            path = Path.parse(path);
+            path = Path.parse(path);  
+            
+            if(parentPath){
+                path = new Path(parentPath).append(path);
+            }                      
+            
+            if (Path.mightParse(path)) {
+                setDirtyState(path, dirty);
+            }
 
             var reference = model;
 
