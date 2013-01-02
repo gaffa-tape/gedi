@@ -206,6 +206,28 @@
                     expected: 'hello'
                 },
                 {
+                    name: "same path get",
+                    test: function(){
+                        var gediTest = new gedi({thing:{stuff:{majigger:'stuff'}}}),
+                            test = this;
+                        
+                        this.result = gediTest.get('[]', '[thing/stuff/majigger]');
+                    },
+                    expected: 'stuff'
+                },
+                {
+                    name: "same path set",
+                    test: function(){
+                        var gediTest = new gedi(),
+                            test = this;
+                        
+                        gediTest.set('[]', 'stuff', '[thing/stuff/majigger]');
+                        
+                        this.result = gediTest.get('[thing/stuff/majigger]');
+                    },
+                    expected: 'stuff'
+                },
+                {
                     name: "set clean",
                     test: function(){
                         var gediTest = new gedi(),

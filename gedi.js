@@ -483,7 +483,9 @@
 
                 path.fastEach(function (pathPart, partIndex, parts) {
 
-                    if (pathPart === gediConstructor.upALevel) {
+                    if(parts.length === 1 && pathPart === ''){
+                        // Empty path, maintain parent path.
+                    } else if (pathPart === gediConstructor.upALevel) {
                         // Up a level? Remove the last item in absoluteParts
                         absoluteParts.pop();
 
