@@ -70,6 +70,26 @@
                     expected: 'things'
                 },
                 {
+                    name: "basic remove",
+                    test: function(){
+                        var gediTest = new gedi({thing:'stuff'});
+                        
+                        gediTest.remove('[thing]');
+                        this.result = gediTest.get('[thing]');
+                    },
+                    expected: undefined
+                },
+                {
+                    name: "nested remove",
+                    test: function(){
+                        var gediTest = new gedi({thing:{stuff:{majigger:'stuff'}}});
+                        
+                        gediTest.remove('[thing/stuff/majigger]');
+                        this.result = gediTest.get('[thing/stuff/majigger]');
+                    },
+                    expected: undefined
+                },
+                {
                     name: "tree creation",
                     test: function(){
                         var gediTest = new gedi();
@@ -217,6 +237,71 @@
                         this.result = gediTest.isDirty('[thing/stuff/majigger]');
                     },
                     expected: true
+                },
+                {
+                    name: "set root (overwrite model)",
+                    test: function(){
+                        var gediTest = new gedi(),
+                            test = this;
+                        
+                        gediTest.set({things:'stuff'});
+                        this.result = gediTest.get('[things]');
+                    },
+                    expected: 'stuff'
+                },
+                {
+                    name: "get root (return model)",
+                    test: function(){
+                        var gediTest = new gedi('stuff'),
+                            test = this;
+                        
+                        this.result = gediTest.get();
+                    },
+                    expected: 'stuff'
+                },
+                {
+                    name: "get dirty state of overwrite",
+                    test: function(){
+                        var gediTest = new gedi(),
+                            test = this;
+                        
+                        gediTest.set({things:'stuff'});
+                        this.result = gediTest.isDirty();
+                    },
+                    expected: true
+                },
+                {
+                    name: "set dirty state of overwrite",
+                    test: function(){
+                        var gediTest = new gedi(),
+                            test = this;
+                        
+                        gediTest.set({things:'stuff'}, false);
+                        this.result = gediTest.isDirty();
+                    },
+                    expected: false
+                },
+                {
+                name: "expression path resolving",
+                    test: function(){
+                        var gediTest = new gedi({stuff:{things:[1,2,3]}}),
+                            test = this;
+                        
+                        
+                        this.result = gediTest.get('(last [things])', '[stuff]');
+                    },
+                    expected: 3
+                },
+                {
+                name: "expression root path resolving",
+                    test: function(){
+                        var gediTest = new gedi({stuff:{things:[1,2,3]}}),
+                            test = this;
+                        
+                        
+                        this.result = gediTest.get('(length [/stuff].things)', '[stuff]');
+                    },
+                    expected: 3
                 }
             ];
             

@@ -10,15 +10,15 @@
     "use strict";
 
     //Create gedi
-    var gedi = window.gedi = window.gedi || newGedi;
+    var gediConstructor = window.gedi = window.gedi || newGedi;
 
     //"constants"
-    gedi.pathSeparator = "/";
-    gedi.upALevel = "..";
-    gedi.rootPath = "";
-    gedi.pathStart = "[";
-    gedi.pathEnd = "]";
-    gedi.pathWildcard = "*";
+    gediConstructor.pathSeparator = "/";
+    gediConstructor.upALevel = "..";
+    gediConstructor.rootPath = "";
+    gediConstructor.pathStart = "[";
+    gediConstructor.pathEnd = "]";
+    gediConstructor.pathWildcard = "*";
 
 
 
@@ -227,12 +227,10 @@
             if (typeof path === "object" && !(path instanceof Path) && !(path instanceof Expression)) {
                 for (var modelProp in model) {
                     delete model[modelProp];
-                    setDirtyState(new Path(modelProp), dirty);
                     trigger(modelProp);
                 }
                 for (var pathProp in path) {
                     model[pathProp] = path[pathProp];
-                    setDirtyState(new Path(pathProp), dirty);
                     trigger(new Path(pathProp), model[pathProp]);
                 }
                 return;
@@ -263,8 +261,6 @@
                     reference = reference[key];
                 }
             });
-
-            trigger(path);
         }
 
         //***********************************************
@@ -273,14 +269,8 @@
         //
         //***********************************************
 
-        function remove(path, dirty) {
-            var reference;
-            
-            if (Path.mightParse(path)) {
-                setDirtyState(path, false, dirty);
-            }        
-        
-            reference = model;
+        function remove(path, model) {
+            var reference = model;
 
             path = Path.parse(path);
 
@@ -304,8 +294,6 @@
                     reference = reference[key];
                 }
             });
-
-            trigger(path);
         }
 
         //***********************************************
@@ -475,7 +463,7 @@
         //***********************************************
 
         function rawToPath(rawPath) {
-            return gedi.pathStart + rawPath + gedi.pathEnd;
+            return gediConstructor.pathStart + rawPath + gediConstructor.pathEnd;
         }
 
         //***********************************************
@@ -495,11 +483,11 @@
 
                 path.fastEach(function (pathPart, partIndex, parts) {
 
-                    if (pathPart === gedi.upALevel) {
+                    if (pathPart === gediConstructor.upALevel) {
                         // Up a level? Remove the last item in absoluteParts
                         absoluteParts.pop();
 
-                    } else if (pathPart === gedi.rootPath) {
+                    } else if (pathPart === gediConstructor.rootPath) {
                         // Root path? Do nothing
                         absoluteParts = [];
 
@@ -550,19 +538,43 @@
         //***********************************************
 
         function modelSet(path, value, parentPath, dirty) {
-            if(parentPath instanceof Boolean){
+            if(typeof path === 'object' && !Path.mightParse(value)){
+                dirty = value;
+                value = path;
+                setDirtyState(null, dirty);
+            }else if(parentPath instanceof Boolean){
                 dirty = parentPath;
                 parentPath = undefined;
-            }
-            
-            if(parentPath){
+            }else if(parentPath){
                 path = new Path(parentPath).append(path);
             }
             
             if (Path.mightParse(path)) {
                 setDirtyState(path, dirty);
             }
+            trigger(path);
             return set(path, value, model);
+        }
+
+        //***********************************************
+        //
+        //      Model Remove
+        //
+        //***********************************************
+
+        function modelRemove(path, parentPath, dirty) {
+            if(parentPath instanceof Boolean){
+                dirty = parentPath;
+                parentPath = undefined;
+            }else if(parentPath){
+                path = new Path(parentPath).append(path);
+            }
+            
+            if (Path.mightParse(path)) {
+                setDirtyState(path, dirty);
+            }
+            trigger(path);
+            return remove(path, model);
         }
 
         //***********************************************
@@ -590,6 +602,10 @@
                     reference = reference[key];
                 }
             });
+            
+            if(!path.length){
+                dirtyModel['_isDirty_'] = dirty;
+            }
         }
 
         //***********************************************
@@ -637,20 +653,21 @@
             if (inheritFromArray.canInherit) {
                 return new Array();
             } else {
-                var tempPrototype = {};
-                for (var key in []) {
-                    tempPrototype[key] = [][key];
+                var tempPrototype = {},
+                    arrayProto = [];
+                for (var key in arrayProto) {
+                    tempPrototype[key] = arrayProto[key];
                 }
-                //from jQuery
+                
                 tempPrototype.length = 0;
-                tempPrototype.pop = [].pop;
-                tempPrototype.push = [].push;
-                tempPrototype.slice = [].slice;
-                tempPrototype.splice = [].splice;
-                tempPrototype.join = [].join;
-                tempPrototype.indexOf = [].indexOf;
+                tempPrototype.pop = arrayProto.pop;
+                tempPrototype.push = arrayProto.push;
+                tempPrototype.slice = arrayProto.slice;
+                tempPrototype.splice = arrayProto.splice;
+                tempPrototype.join = arrayProto.join;
+                tempPrototype.indexOf = arrayProto.indexOf;
                 // add fastEach
-                tempPrototype.fastEach = [].fastEach;
+                tempPrototype.fastEach = arrayProto.fastEach;
                 return tempPrototype;
             }
         }
@@ -672,10 +689,10 @@
 
             //passed a string or array? make a new Path.
             if (typeof path === "string") {
-                if (path.charAt(0) === gedi.pathStart) {
+                if (path.charAt(0) === gediConstructor.pathStart) {
                     path = pathToRaw(path);
                 }
-                var keys = path.split(gedi.pathSeparator);
+                var keys = path.split(gediConstructor.pathSeparator);
                 keys.fastEach(function (key) {
                     self.push(key);
                 });
@@ -697,11 +714,11 @@
             this.length--;
         }
         Path.prototype.toString = function () {
-            var str = this.join(gedi.pathSeparator);
+            var str = this.join(gediConstructor.pathSeparator);
             return str && rawToPath(str) || undefined;
         };
         Path.prototype.toRawString = function () {
-            return this.join(gedi.pathSeparator);
+            return this.join(gediConstructor.pathSeparator);
         };
         Path.prototype.slice = function () {
             return new Path(Array.prototype.slice.apply(this, arguments));
@@ -775,11 +792,11 @@
             return expression instanceof this && expression || new Expression(expression);
         };
 
-        function innerGedi() {
+        function gedi() {
             
         }
 
-        innerGedi.prototype = {
+        gedi.prototype = {
             Path: Path,
             Expression: Expression,
 
@@ -795,12 +812,16 @@
 
             set: modelSet,
 
-            init: function (model) {
-                this.set(model);
-                this.setDirtyState("", false);
+            remove: modelRemove,
+            
+            utils: {
+                get:get,
+                set:set
             },
 
-            remove: remove,
+            init: function (model) {
+                this.set(model, false);
+            },
 
             bind: setBinding,
 
@@ -813,7 +834,7 @@
             }
         };
 
-        return new innerGedi();
+        return new gedi();
 
     }
 })();
