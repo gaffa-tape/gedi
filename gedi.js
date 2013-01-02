@@ -101,28 +101,25 @@
 
         function detectPathToken(expression) {
             if (expression.charAt(0) === '[') {
-                var index = 1,
-                    escapes = 0;
+                var index = 1;
                     
-                while (expression.charAt(index) !== ']' && index < expression.length){
-                    if (expression.charAt(index) === '\\' && (expression.charAt(index + 1) === '[' || expressioncharAt(index + 1) === ']')) {
-                        expression = expression.slice(0, index) + expression.slice(index + 1);
-                        index++;
-                        escapes++;
-                    }
-                    else {
+                do {
+                    if (
+                        (expression.charAt(index) === '\\' && expression.charAt(index + 1) === '\\') || // escaped escapes
+                        (expression.charAt(index) === '\\' && (expression.charAt(index + 1) === '[' || expression.charAt(index + 1) === ']')) //escaped braces
+                    ) {
                         index++;
                     }
-                }
-
-                if (index > 1) {
-                    var value = expression.slice(0, index + 1);
-                    return {
-                        value: value,
-                        index: index + escapes + 1,
-                        callback: pathTokenCallback
-                    };
-                }
+                    else if(expression.charAt(index) === ']'){                        
+                        var value = new Path(expression.slice(1, index).replace(/\\(?!\\)/g, '').split(gediConstructor.pathSeparator));
+                        return {
+                            value: value,
+                            index: index + 1,
+                            callback: pathTokenCallback
+                        };
+                    }
+                    index++;
+                } while (index < expression.length);
             }
         }
 
@@ -690,13 +687,21 @@
                 return path.slice();
             }
 
-            //passed a string or array? make a new Path.
-            if (typeof path === "string") {
-                if (path.charAt(0) === gediConstructor.pathStart) {
-                    path = pathToRaw(path);
+            // passed in an Expression or an 'expression formatted' Path (eg: '[bla]')
+            if ((typeof path === "string" && path.charAt(0) === gediConstructor.pathStart) || path instanceof Expression) {
+                var pathString = path.toString(),
+                    detectedPathToken = detectPathToken(pathString);
+
+                if (detectedPathToken.index === pathString.length) {
+                    detectedPathToken.value.fastEach(function (key) {
+                        self.push(key);
+                    });
+                } else {
+                    console.warn('Invalid Path syntax');
                 }
-                var keys = path.split(gediConstructor.pathSeparator);
-                keys.fastEach(function (key) {
+            } else if(typeof path === 'string'){ 
+                //passed a string or array? make a new Path.
+                path.split(gediConstructor.pathSeparator).fastEach(function (key) {
                     self.push(key);
                 });
             } else if (path instanceof Array) {
@@ -738,20 +743,7 @@
         Path.prototype.last = function () {
             return this[this.length - 1];
         };
-        Path.parse = function (path) {
-
-            if (path instanceof Expression) {
-                // Check if the passed in path is an Expression, that is also just a Path.
-
-                var detectedPathToken = detectPathToken(path.original);
-
-                if (detectedPathToken.index === path.original.length) {
-                    path = new Path(detectedPathToken.value);
-                } else {
-                    console.warn('could not parse Expression directly to Path');
-                }
-            }
-
+        Path.parse = function (path) {  
             return path instanceof this && path || new Path(path);
         };
         Path.mightParse = function (path) {

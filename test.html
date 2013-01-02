@@ -324,21 +324,95 @@
                         this.result = gediTest.get('(length [/stuff].things)', '[stuff]');
                     },
                     expected: 3
+                },
+                {
+                name: "escaped braces",
+                    test: function(){
+                        var model = {},
+                            gediTest = new gedi(model),
+                            test = this;
+                        
+                        model['[]'] = 'things';
+                        
+                        this.result = gediTest.get('[\\[\\]]');
+                    },
+                    expected: 'things'
+                },
+                {
+                name: "escaped braces resolution",
+                    test: function(){
+                        var model = {},
+                            gediTest = new gedi(model),
+                            test = this;
+                        
+                        model['[]'] = {};
+                        model['[]'][']['] = 'things';
+                        
+                        this.result = gediTest.get('[\\]\\[]', '[\\[\\]]');
+                    },
+                    expected: 'things'
+                },
+                {
+                name: "escaped escapes", //http://knowyourmeme.com/memes/xzibit-yo-dawg
+                    test: function(){
+                        var model = {},
+                            gediTest = new gedi(model),
+                            test = this;
+                        
+                        model['\\'] = 'things';
+                        
+                        this.result = gediTest.get('[\\\\]');
+                    },
+                    expected: 'things'
+                },
+                {
+                name: "escaped braces resolution",
+                    test: function(){
+                        var model = {},
+                            gediTest = new gedi(model),
+                            test = this;
+                        
+                        model['\\'] = {};
+                        model['\\']['\\'] = 'things';
+                        
+                        this.result = gediTest.get('[\\\\]', '[\\\\]');
+                    },
+                    expected: 'things'
+                },
+                {
+                name: "escaped braces and escaped escapes",
+                    test: function(){
+                        var model = {},
+                            gediTest = new gedi(model),
+                            test = this;
+                        
+                        model['\\[]\\'] = 'things';
+                        
+                        this.result = gediTest.get('[\\\\[\\]\\\\]');
+                    },
+                    expected: 'things'
                 }
             ];
             
             var resultsElement = document.getElementsByClassName('results')[0];
 
             function runTests(){
+                var errors = [];
                 for(var i = 0; i < tests.length; i++){
                     var test = tests[i],
                         resultElement,
                         title,
                         result,
-                        description;
+                        description,
+                        hasError;
                     
-                    test.test.call(test);
-                    test.passed = test.result === test.expected;
+                    try{
+                        test.test.call(test);
+                    }catch(error){
+                        errors.push(error.toString());
+                        hasError = true;
+                    }
+                    test.passed = test.result === test.expected && !hasError;
                     
                     resultElement = crel('div', {'class':(test.passed && 'passed' || 'failed') + ' test'},
                         (title = crel('h1', test.name + ' ' + (test.passed && 'passed' || 'failed'))),
@@ -347,6 +421,10 @@
                     );
                     
                     resultsElement.appendChild(resultElement);
+                }
+                
+                for(var i = 0; i < errors.length; i++){
+                    console.error(errors[i]);
                 }
             }
             
