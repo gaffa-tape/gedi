@@ -103,7 +103,8 @@
             if (expression.charAt(0) === '[') {
                 var index = 1,
                     escapes = 0;
-                do {
+                    
+                while (expression.charAt(index) !== ']' && index < expression.length){
                     if (expression.charAt(index) === '\\' && (expression.charAt(index + 1) === '[' || expressioncharAt(index + 1) === ']')) {
                         expression = expression.slice(0, index) + expression.slice(index + 1);
                         index++;
@@ -112,7 +113,7 @@
                     else {
                         index++;
                     }
-                } while (expression.charAt(index) !== ']' && index < expression.length);
+                }
 
                 if (index > 1) {
                     var value = expression.slice(0, index + 1);
