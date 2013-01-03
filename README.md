@@ -156,7 +156,9 @@ If you use an integer in a path, gedi assumes the object is an array:
     
 ## Binding to changes ##
 
-Callbacks can be bound to model paths:
+Callbacks can be bound to the model via Paths or Expressions:
+
+### Binding to a Path ###
 
     model.bind('[thing/stuff]', function(event){
         alert(model.get(event.target));
@@ -169,6 +171,8 @@ Callbacks can be bound to model paths:
 The event.target property contains a path to the changed property, NOT the path used to bind the callback.
     
 The event.value property represents the value at the path used to bind the callback.
+
+### Binding to an Expression ###
 
 if an Expression is passed to bind(), it will automatically detect every binding in the expression and set the callback to trigger when any referenced parts of the model changes.
 
