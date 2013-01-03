@@ -71,7 +71,7 @@ Gedi adds a custom 'path' token to Gel to allow paths to be used within expressi
 
 ### Get ###
 
-    model.get([string/Path/Expression])
+    model.get('[string/Path/Expression]')
     
 get will return the value of the model, at the path specified. The path may be a string, an instance of a Path, an instance of an Expression, or falsy.
 if get is called with a falsy path, eg undefined, it will return the entire model.
@@ -103,7 +103,9 @@ Use an expression to get the length of an array:
 Access via a relative path
 
     return model.get('[2]', '[bla]');
-    
+                       ^       ^
+                      Path   Parent Path
+                         
     // returns 3
     
 This is useful when you have a group of opperations to do at a common path depth
@@ -152,7 +154,7 @@ If you use an integer in a path, gedi assumes the object is an array:
 
     model.set('[missingArray/0]', 'item');
     
-    //will create a new array at model.missingArray
+    // will create a new array at model.missingArray
     
 ## Binding to changes ##
 
