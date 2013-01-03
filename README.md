@@ -144,6 +144,15 @@ set() can also be relative:
 
     model.set('[thing]', 'hello', '[property/majigger]');
 
+If you set into a non-existant path, gedi will automatically create objects to put your value in:
+
+    model.set('[this/does/not/exist/yet]', 'Now It Does');
+    
+If you use an integer in a path, gedi assumes the object is an array:
+
+    model.set('[missingArray/0]', 'item');
+    
+    //will create a new array at model.missingArray
     
 ## Binding to changes ##
 
