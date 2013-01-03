@@ -57,7 +57,7 @@ This object makes working with paths easier:
     
     // resolvedPath will be [hello/majigger]
     
-### Expressions ###
+### Expressions (Only if Gel is available) ###
 
 Expressions can be used to manipulate the data as it is being retrieved from the model. Gedi Expressions use Gel to perform opperations.
 
