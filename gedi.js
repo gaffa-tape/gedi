@@ -564,7 +564,7 @@
         //***********************************************
 
         function modelSet(path, value, parentPath, dirty) {
-            if(typeof path === 'object' && !Path.mightParse(value)){
+            if(typeof path === 'object' && !Path.mightParse(path)){
                 dirty = value;
                 value = path;
                 path = Path.root();
