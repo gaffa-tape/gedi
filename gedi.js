@@ -10,7 +10,7 @@
     "use strict";
 
     //Create gedi
-    var gediConstructor = window.gedi = window.gedi || newGedi;
+    var gediConstructor = window.Gedi = window.Gedi || newGedi;
 
     //"constants"
     gediConstructor.pathSeparator = "/";
@@ -20,6 +20,9 @@
     gediConstructor.pathEnd = "]";
     gediConstructor.pathWildcard = "*";
 
+    var exceptions = {
+        invalidPath: 'Invalid path syntax'
+    };
 
 
     //***********************************************
@@ -207,7 +210,23 @@
             }
             return model;
         }
+        
 
+        //***********************************************
+        //
+        //      Overwrite Model
+        //
+        //***********************************************
+
+        function overwriteModel(replacement, model){
+            for (var modelProp in model) {
+                delete model[modelProp];
+            }
+            for (var replacementProp in replacement) {
+                model[replacementProp] = replacement[replacementProp];
+            }
+        }
+        
 
         //***********************************************
         //
@@ -215,33 +234,31 @@
         //
         //***********************************************
 
-        function set(path, value) {
-            //passed a null or undefined path, do nothing.
+        function set(path, value, model) {
+            // passed a null or undefined path, do nothing.
             if (!path) {
                 return;
             }
 
-            //If you just pass in an object, you are overwriting the model.
+            // If you just pass in an object, you are overwriting the model.
             if (typeof path === "object" && !(path instanceof Path) && !(path instanceof Expression)) {
-                for (var modelProp in model) {
-                    delete model[modelProp];
-                    trigger(modelProp);
-                }
-                for (var pathProp in path) {
-                    model[pathProp] = path[pathProp];
-                    trigger(new Path(pathProp), model[pathProp]);
-                }
-                return;
+                value = path;
+                path = Path.root();
             }
 
-            path = Path.parse(path);  
+            path = Path.parse(path);
+            
+            if(path.isRoot() || path.length === 0){                
+                overwriteModel(value, model);
+                return;
+            }
 
             var reference = model;
 
             path.fastEach(function (key, index, path) {
-
-                //if we have hit a non-object property on the reference and we have more keys after this one
-                //make an object (or array) here and move on.
+                
+                // if we have hit a non-object property on the reference and we have more keys after this one
+                // make an object (or array) here and move on.
                 if ((typeof reference[key] !== "object" || reference[key] === null) && index < path.length - 1) {
                     if (!isNaN(key)) {
                         reference[key] = [];
@@ -294,6 +311,7 @@
             });
         }
 
+        
         //***********************************************
         //
         //      Trigger Binding
@@ -308,17 +326,15 @@
             path = Path.parse(path);
 
             var reference = internalBindings,
-                references = [];
+                references = [reference];
 
-            modelChangeEvent = modelChangeEvent || {
-                target: path
-            };
+            modelChangeEvent = modelChangeEvent || {target: path};
 
             function triggerListeners(reference, sink) {
                 if (reference != undefined && reference !== null) {
                     reference.fastEach(function (callback) {
 
-                        callback(modelChangeEvent);
+                        callback({target:modelChangeEvent.path, value: modelGet(callback.binding, callback.parentPath)});
 
                     });
                     if (sink) {
@@ -378,22 +394,34 @@
         //
         //***********************************************
 
-        function setBinding(binding, callback) {
+        function setBinding(binding, callback, parentPath) {
 
             var path,
                 reference = internalBindings;
+            
+            callback.binding = callback.binding || binding;
+            callback.parentPath = parentPath;
 
             //If the binding has opperators in it, break them apart and set them individually.
             if (!(binding instanceof Path)) {
                 var paths = Expression.parse(binding).paths;
 
                 paths.fastEach(function (path) {
-                    setBinding(path, callback);
+                    setBinding(path, callback, parentPath);
                 });
                 return;
             }
 
             path = binding;
+                        
+            if (parentPath) {
+                path = Path.parse(parentPath).append(path);
+            }
+            
+            if(path.isRoot()){
+                reference.push(callback);
+                return;
+            }
 
             path.fastEach(function (key, index, path) {
 
@@ -521,9 +549,7 @@
                     expression = binding.toString();
                 }
 
-                gelResult = gel.parse(expression, context);
-
-                return gelResult;
+                return gel.parse(expression, context);
             }
             if (parentPath) {
                 binding = getAbsolutePath(parentPath, binding);
@@ -541,19 +567,17 @@
             if(typeof path === 'object' && !Path.mightParse(value)){
                 dirty = value;
                 value = path;
-                setDirtyState(null, dirty);
+                path = Path.root();
             }else if(parentPath instanceof Boolean){
                 dirty = parentPath;
                 parentPath = undefined;
             }else if(parentPath){
                 path = new Path(parentPath).append(path);
             }
-            
-            if (Path.mightParse(path)) {
-                setDirtyState(path, dirty);
-            }
-            trigger(path);
-            return set(path, value, model);
+
+            setDirtyState(path, dirty);
+            set(path, value, model);
+            trigger(path, value);
         }
 
         //***********************************************
@@ -570,11 +594,9 @@
                 path = new Path(parentPath).append(path);
             }
             
-            if (Path.mightParse(path)) {
-                setDirtyState(path, dirty);
-            }
+            setDirtyState(path, dirty);
+            remove(path, model);
             trigger(path);
-            return remove(path, model);
         }
 
         //***********************************************
@@ -585,6 +607,10 @@
 
         function setDirtyState(path, dirty) {
             var reference = dirtyModel;
+            
+            if(!Path.mightParse(path)){
+                throw exceptions.invalidPath;
+            }
 
             dirty = dirty !== false;
 
@@ -723,7 +749,7 @@
         }
         Path.prototype.toString = function () {
             var str = this.join(gediConstructor.pathSeparator);
-            return str && rawToPath(str) || undefined;
+            return rawToPath(str);
         };
         Path.prototype.toRawString = function () {
             return this.join(gediConstructor.pathSeparator);
@@ -743,11 +769,17 @@
         Path.prototype.last = function () {
             return this[this.length - 1];
         };
+        Path.prototype.isRoot = function () {
+            return this.length === 1 && this[0] === gediConstructor.rootPath;
+        };
         Path.parse = function (path) {  
             return path instanceof this && path || new Path(path);
         };
         Path.mightParse = function (path) {
             return path instanceof this || path instanceof Expression || typeof path === 'string' || Array.isArray(path);
+        };
+        Path.root = function () {
+            return new Path(gediConstructor.rootPath);
         };
 
         //***********************************************
@@ -787,11 +819,11 @@
             return expression instanceof this && expression || new Expression(expression);
         };
 
-        function gedi() {
+        function Gedi() {
             
         }
 
-        gedi.prototype = {
+        Gedi.prototype = {
             Path: Path,
             Expression: Expression,
 
@@ -829,7 +861,7 @@
             }
         };
 
-        return new gedi();
+        return new Gedi();
 
     }
 })();
