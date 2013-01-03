@@ -132,8 +132,8 @@
         //
         //***********************************************
 
-        if (window.gel) {
-            gel = new window.gel();
+        if (window.Gel) {
+            gel = new window.Gel();
             
             gel.tokenConverters.others.path = detectPathToken;
 
