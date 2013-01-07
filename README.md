@@ -20,9 +20,7 @@ Gedi makes it easy, quick, and maintainable.
 
 # Dependencies #
 
-Gedi has no dependencies, however, it is much more powerful with Gel ( https://github.com/gaffa-tape/gel )*
-
-*there may be some issues trying to use Gedi without Gel currently due to recent refactoring, but there will be no dependency in the future.
+Gedi has no dependencies, however, it is much more powerful with Gel ( https://github.com/gaffa-tape/gel )
 
 # Usage #
 
