@@ -21,7 +21,8 @@
     gediConstructor.pathWildcard = "*";
 
     var exceptions = {
-        invalidPath: 'Invalid path syntax'
+        invalidPath: 'Invalid path syntax',
+        expressionsRequireGel: 'Gel is required to use Expressions in Gedi'
     };
 
 
@@ -179,6 +180,10 @@
                 var reference = model;
 
                 path = Path.parse(path);
+                
+                if(path.isRoot() || path.length === 0){
+                    return reference;
+                }
 
                 path.fastEach(function (key, index) {
                     if (reference === null || reference === undefined) {
@@ -467,7 +472,7 @@
                     paths.push(Path.parse(token.value));
                 });
             } else {
-                return [expressionString];
+                return [Path.parse(expressionString)];
             }
             return paths;
         }
@@ -551,9 +556,11 @@
 
                 return gel.parse(expression, context);
             }
-            if (parentPath) {
-                binding = getAbsolutePath(parentPath, binding);
-            }
+            
+            parentPath = parentPath || new Path();
+            
+            binding = getAbsolutePath(parentPath, binding);
+            
             return get(binding, model);
         }
 
@@ -571,9 +578,12 @@
             }else if(parentPath instanceof Boolean){
                 dirty = parentPath;
                 parentPath = undefined;
-            }else if(parentPath){
-                path = new Path(parentPath).append(path);
             }
+            
+            parentPath = parentPath || new Path();
+            
+            path = new Path(parentPath).append(path);
+            
 
             setDirtyState(path, dirty);
             set(path, value, model);
@@ -590,9 +600,12 @@
             if(parentPath instanceof Boolean){
                 dirty = parentPath;
                 parentPath = undefined;
-            }else if(parentPath){
-                path = new Path(parentPath).append(path);
             }
+            
+            parentPath = parentPath || new Path();
+            
+            path = new Path(parentPath).append(path);
+            
             
             setDirtyState(path, dirty);
             remove(path, model);
@@ -796,17 +809,29 @@
             if (expression instanceof Expression) {
                 return expression;
             }
-
-            //passed a string or array? make a new Expression.
-            if (typeof expression === "string") {
-                var tokens = gel.tokenise(expression);
-                tokens.fastEach(function (key) {
-                    self.push(key);
-                });
-            }
-
+            
             self.original = expression;
 
+            if (typeof expression === "string") {
+                if(gel){
+                //passed a string or array? make a new Expression.
+                    var tokens = gel.tokenise(expression);
+                    tokens.fastEach(function (key) {
+                        self.push(key);
+                    });
+                }else{
+                    var path = Path.parse(expression);
+                    
+                    if(path.toString() !== expression){
+                        throw exceptions.expressionsRequireGel;
+                    }
+                    
+                    path.fastEach(function(key){
+                        self.paths
+                        self.push(key);
+                    });
+                }
+            }
             self.paths = getPathsInExpression(self);
         }
         Expression.prototype = inheritFromArray();
