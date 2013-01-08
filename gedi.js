@@ -406,6 +406,9 @@
             
             callback.binding = callback.binding || binding;
             callback.parentPath = parentPath;
+            if(!callback.references){
+                callback.references = [];
+            }
 
             //If the binding has opperators in it, break them apart and set them individually.
             if (!(binding instanceof Path)) {
@@ -418,6 +421,8 @@
             }
 
             path = binding;
+            
+            callback.references.push(path);
                         
             if (parentPath) {
                 path = Path.parse(parentPath).append(path);
@@ -425,6 +430,7 @@
             
             if(path.isRoot()){
                 reference.push(callback);
+                callback.references.push(path);
                 return;
             }
 
@@ -451,6 +457,57 @@
                     //otherwise, RECURSANIZE! (ish...)
                 else {
                     reference = reference[key];
+                }
+            });
+        }
+
+
+        //***********************************************
+        //
+        //      Remove Binding
+        //
+        //***********************************************
+        
+        function removeBinding(path, callback){
+            var callbacks;
+            
+            if(typeof path === 'function'){
+                callback = path;
+                path = null;
+            }
+            
+            if(path == null){
+                if(callback != null && callback.references){
+                    callback.references.fastEach(function(path){
+                        removeBinding(path, callback);
+                    });
+                    return;
+                }
+                    
+                internalBindings = [];
+                return;
+            }
+            
+            if(!(path instanceof Path)){
+                Expression.parse(path).paths.fastEach(function(path){
+                    removeBinding(path, callback);
+                });
+                return;
+            }            
+            
+            callbacks = get(path, internalBindings);
+            
+            if(!callback){
+                while(callbacks.length){
+                    callbacks.pop();
+                }
+                return;
+            }
+            
+            callbacks.fastEach(function(handler, index, callbacks){
+                if(handler === callback){
+                    callbacks.splice(index, 1);
+                    return true;
                 }
             });
         }
@@ -876,6 +933,8 @@
             },
 
             bind: setBinding,
+
+            debind: removeBinding,
 
             trigger: trigger,
 
