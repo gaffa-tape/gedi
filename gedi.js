@@ -181,7 +181,7 @@
 
                 path = Path.parse(path);
                 
-                if(path.isRoot() || path.length === 0){
+                if(path.isRoot()){
                     return reference;
                 }
 
@@ -253,7 +253,7 @@
 
             path = Path.parse(path);
             
-            if(path.isRoot() || path.length === 0){                
+            if(path.isRoot()){                
                 overwriteModel(value, model);
                 return;
             }
@@ -840,7 +840,7 @@
             return this[this.length - 1];
         };
         Path.prototype.isRoot = function () {
-            return this.length === 1 && this[0] === gediConstructor.rootPath;
+            return (this.length === 1 && this[0] === gediConstructor.rootPath) || this.length === 0;
         };
         Path.parse = function (path) {  
             return path instanceof this && path || new Path(path);
