@@ -187,5 +187,20 @@ if an Expression is passed to bind(), it will automatically detect every binding
     
     model.set('[c]', 'c is now truthy'); // will alert a because a is already set, and it is truthy
     
+### Removing a binding ###
+
+To stop listening for changes to the model, use .debind()
+
+To remove a callback at a specific path:
+
+    model.debind('[a]', callback);
+    
+To remove a callback from gedi entirely:
+
+    model.debind(callback);
+    
+To remove all callbacks at a specific path:
+
+    model.debind('[a]');
 
     
