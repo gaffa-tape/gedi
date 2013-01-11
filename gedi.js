@@ -323,7 +323,7 @@
         //
         //***********************************************
 
-        function trigger(path, modelChangeEvent) {
+        function trigger(path) {
             if (eventsPaused) {
                 return;
             }
@@ -331,9 +331,8 @@
             path = Path.parse(path);
 
             var reference = internalBindings,
-                references = [reference];
-
-            modelChangeEvent = modelChangeEvent || {target: path};
+                references = [reference],
+                modelChangeEvent = {target: path};
 
             function triggerListeners(reference, sink) {
                 if (reference != undefined && reference !== null) {
@@ -644,7 +643,7 @@
 
             setDirtyState(path, dirty);
             set(path, value, model);
-            trigger(path, value);
+            trigger(path);
         }
 
         //***********************************************
