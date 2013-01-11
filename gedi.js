@@ -787,7 +787,7 @@
                 var pathString = path.toString(),
                     detectedPathToken = detectPathToken(pathString);
 
-                if (detectedPathToken.index === pathString.length) {
+                if (detectedPathToken && detectedPathToken.index === pathString.length) {
                     detectedPathToken.value.fastEach(function (key) {
                         self.push(key);
                     });
