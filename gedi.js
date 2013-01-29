@@ -103,27 +103,28 @@
         //
         //***********************************************
 
-        function detectPathToken(expression) {
-            if (expression.charAt(0) === '[') {
+        function detectPathToken(substring){
+            if (substring.charAt(0) === '[') {
                 var index = 1;
                     
                 do {
                     if (
-                        (expression.charAt(index) === '\\' && expression.charAt(index + 1) === '\\') || // escaped escapes
-                        (expression.charAt(index) === '\\' && (expression.charAt(index + 1) === '[' || expression.charAt(index + 1) === ']')) //escaped braces
+                        (substring.charAt(index) === '\\' && substring.charAt(index + 1) === '\\') || // escaped escapes
+                        (substring.charAt(index) === '\\' && (substring.charAt(index + 1) === '[' || substring.charAt(index + 1) === ']')) //escaped braces
                     ) {
                         index++;
                     }
-                    else if(expression.charAt(index) === ']'){                        
-                        var value = new Path(expression.slice(1, index).replace(/\\(?!\\)/g, '').split(gediConstructor.pathSeparator));
-                        return {
-                            value: value,
-                            index: index + 1,
-                            callback: pathTokenCallback
-                        };
+                    else if(substring.charAt(index) === ']'){                        
+                        var original = substring.slice(0, index+1);
+                        
+                        return new gel.Token(
+                            this,
+                            original,
+                            original.length
+                        );
                     }
                     index++;
-                } while (index < expression.length);
+                } while (index < substring.length);
             }
         }
 
@@ -136,15 +137,28 @@
         if (window.Gel) {
             gel = new window.Gel();
             
-            gel.tokenConverters.others.path = detectPathToken;
+            gel.tokenConverters.primitives.path = {
+                name: 'gediPathToken',
+                tokenise:detectPathToken,
+                parse: function(){},
+                evaluate: function(scope){
+                    this.result = get(Path.parse(scope._gediModelContext_).append(this.original), model);
+                }
+            };
 
-            gel.functions.isDirty = isDirty;
+            gel.functions.isDirty = function(scope, args){
+                var pathToken = args.raw()[0];
+                
+                return isDirty((pathToken && pathToken.name === 'gediPathToken') ? pathToken.original : new Path());                              
+            }
 
-            gel.functions.getAllDirty = function (path) {
-                var path = Path.parse(this._gediModelContext_).append(path),
-                    source = get(path),
+            gel.functions.getAllDirty = function (scope, args) {
+                var pathToken = args.raw()[0],
+                    path = Path.parse(scope._gediModelContext_).append((pathToken && pathToken.name === 'gediPathToken') ? pathToken.original : new Path()),
+                    source = get(path, model),
                     result,
-                    itemPath
+                    itemPath;
+                    
                 if (source == null) {
                     return null;
                 }
@@ -523,9 +537,11 @@
                 expressionString = exp instanceof Expression ? exp.original : exp;
 
             if (gel) {
-                var tokens = gel.getTokens(expressionString, 'path');
+                var tokens = gel.tokenise(expressionString);
                 tokens.fastEach(function (token) {
-                    paths.push(Path.parse(token.value));
+                    if(token.name === 'gediPathToken'){
+                        paths.push(Path.parse(token.original));
+                    }
                 });
             } else {
                 return [Path.parse(expressionString)];
@@ -610,7 +626,7 @@
                     expression = binding.toString();
                 }
 
-                return gel.parse(expression, context);
+                return gel.evaluate(expression, context);
             }
             
             parentPath = parentPath || new Path();
@@ -631,7 +647,7 @@
                 dirty = value;
                 value = path;
                 path = Path.root();
-            }else if(parentPath instanceof Boolean){
+            }else if(typeof parentPath === 'boolean'){
                 dirty = parentPath;
                 parentPath = undefined;
             }
@@ -774,7 +790,7 @@
         //***********************************************
 
         function Path(path) {
-            var self = this,
+            var pathInstance = this,
                 absolute = false;
 
             //Passed a Path? pass it back.
@@ -787,25 +803,25 @@
                 var pathString = path.toString(),
                     detectedPathToken = detectPathToken(pathString);
 
-                if (detectedPathToken && detectedPathToken.index === pathString.length) {
-                    detectedPathToken.value.fastEach(function (key) {
-                        self.push(key);
-                    });
+                if (detectedPathToken && detectedPathToken.length === pathString.length) {
+                    path = detectedPathToken.original.replace(/\\\]/g, "]").replace(/\\\[/g, "[").slice(1,-1);
                 } else {
                     console.warn('Invalid Path syntax');
                 }
-            } else if(typeof path === 'string'){ 
+            }
+
+            if(typeof path === 'string'){
                 //passed a string or array? make a new Path.
                 path.split(gediConstructor.pathSeparator).fastEach(function (key) {
-                    self.push(key);
+                    pathInstance.push(key);
                 });
             } else if (path instanceof Array) {
                 path.fastEach(function (key) {
-                    self.push(key);
+                    pathInstance.push(key);
                 });
             }
 
-            self.original = path;
+            pathInstance.original = path;
         }
         Path.prototype = inheritFromArray();
         Path.prototype.push = Path.prototype.push || function () {

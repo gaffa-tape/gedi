@@ -291,7 +291,7 @@
                         
                         gedi.set('[thing/stuff/majigger/3]', 'hello');
                     },
-                    expected: '3[object Object]'
+                    expected: '4[object Object]'
                 },
                 {
                     name: "relative get",
@@ -482,6 +482,77 @@
                         this.result = gedi.isDirty();
                     },
                     expected: false
+                },
+                {
+                    name: "is dirty expression",
+                    test: function(){
+                        var gedi = new Gedi(),
+                            test = this;
+                        
+                        gedi.set({things:'stuff'}, false);
+                        this.result = gedi.get('(isDirty)');
+                    },
+                    expected: false
+                },
+                {
+                    name: "is dirty expression 2",
+                    test: function(){
+                        var gedi = new Gedi(),
+                            test = this;
+                        
+                        gedi.set({things:'stuff'});
+                        this.result = gedi.get('(isDirty)');
+                    },
+                    expected: true
+                },
+                {
+                    name: "is dirty expression 3",
+                    test: function(){
+                        var gedi = new Gedi({things:{a:'a',b:'b',c:'c'},stuff:'b',majigger:'c'}),
+                            test = this;
+                        
+                        gedi.set('[things/a]', 'nope', false);
+                        gedi.set('[things/b]', 'yerp');
+                        this.result = gedi.get('(isDirty [things/a])');
+                    },
+                    expected: false
+                },
+                {
+                    name: "is dirty expression 4",
+                    test: function(){
+                        var gedi = new Gedi({things:{a:'a',b:'b',c:'c'},stuff:'b',majigger:'c'}),
+                            test = this;
+                        
+                        gedi.set('[things/a]', 'nope', false);
+                        gedi.set('[things/b]', 'yerp');
+                        this.result = gedi.get('(isDirty [things/b])');
+                    },
+                    expected: true
+                },
+                {
+                    name: "get all dirty expression",
+                    test: function(){
+                        var gedi = new Gedi(),
+                            test = this;
+                        
+                        gedi.set({things:'stuff'}, false);
+                        this.result = gedi.get('(getAllDirty).things');
+                    },
+                    expected: undefined
+                },
+                {
+                    name: "get all dirty expression 2",
+                    test: function(){
+                        var gedi = new Gedi({things:{a:'a',b:'b',c:'c'},stuff:'b',majigger:'c'}),
+                            test = this,
+                            allDirty;
+                        
+                        gedi.set('[things/a]', 'nope', false);
+                        gedi.set('[things/b]', 'yerp');
+                        allDirty = gedi.get('(getAllDirty [things])');
+                        this.result = [allDirty.a, allDirty.b, allDirty.c].join(' ');
+                    },
+                    expected: ' yerp '
                 },
                 {
                 name: "expression path resolving",
@@ -703,6 +774,7 @@
                     var test = tests[i],
                         resultElement,
                         title,
+                        runBtn,
                         result,
                         description,
                         hasError = false;
@@ -720,8 +792,15 @@
                     resultElement = crel('div', {'class':(test.passed && 'passed' || 'failed') + ' test'},
                         (title = crel('h1', test.name + ' ' + (test.passed && 'passed' || 'failed'))),
                         (result = crel('span', {'class':'result'}), 'output: ' + test.result + ', expected: ' + test.expected),
+                        (runBtn = crel('button', {type:'button'}, 'Run again')),
                         (description = crel('pre', {'class':'description'}, test.test.toString()))
                     );
+                    
+                    (function(test){
+                        runBtn.addEventListener('click', function(){
+                            test.test.call(test);
+                        });
+                    })(test);
                     
                     resultsElement.appendChild(resultElement);
                 }
