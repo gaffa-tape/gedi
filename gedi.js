@@ -957,7 +957,9 @@
 
             setDirtyState: function (path, dirty) {
                 return setDirtyState(path, dirty);
-            }
+            },
+            
+            gel: gel // expose gel instance for extension
         };
 
         return new Gedi();
