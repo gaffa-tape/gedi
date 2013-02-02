@@ -806,6 +806,7 @@
                 if (detectedPathToken && detectedPathToken.length === pathString.length) {
                     path = detectedPathToken.original.replace(/\\\]/g, "]").replace(/\\\[/g, "[").slice(1,-1);
                 } else {
+                    path = "";
                     console.warn('Invalid Path syntax');
                 }
             }
@@ -899,7 +900,6 @@
                     }
                     
                     path.fastEach(function(key){
-                        self.paths
                         self.push(key);
                     });
                 }
