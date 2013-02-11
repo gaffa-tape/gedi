@@ -614,7 +614,7 @@
         //
         //***********************************************
 
-        function modelGet(binding, parentPath) {
+        function modelGet(binding, parentPath, asTokens) {
             if (binding && gel) {
                 var gelResult,
                     expression = binding,
@@ -626,7 +626,7 @@
                     expression = binding.toString();
                 }
 
-                return gel.evaluate(expression, context);
+                return gel.evaluate(expression, context, asTokens);
             }
             
             parentPath = parentPath || new Path();
