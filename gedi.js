@@ -858,6 +858,9 @@
         Path.prototype.isRoot = function () {
             return (this.length === 1 && this[0] === gediConstructor.rootPath) || this.length === 0;
         };
+        Path.prototype.toJSON = function(){
+            return this.toString();
+        };
         Path.parse = function (path) {  
             return path instanceof this && path || new Path(path);
         };
@@ -909,6 +912,9 @@
         Expression.prototype = inheritFromArray();
         Expression.prototype.toString = function () {
             return this.original;
+        };
+        Expression.prototype.toJSON = function(){
+            return this.toString();
         };
         Expression.parse = function (expression) {
             expression instanceof Path && (expression = expression.toString());
