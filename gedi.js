@@ -346,13 +346,15 @@
 
             var reference = internalBindings,
                 references = [reference],
-                modelChangeEvent = {target: path};
+                target = path;
 
             function triggerListeners(reference, sink) {
                 if (reference != undefined && reference !== null) {
                     reference.fastEach(function (callback) {
+                    
+                        var token = modelGet(callback.binding, callback.parentPath, true).pop();
 
-                        callback({target:modelChangeEvent.path, value: modelGet(callback.binding, callback.parentPath)});
+                        callback({target:target, value: token.result, token: token});
 
                     });
                     if (sink) {

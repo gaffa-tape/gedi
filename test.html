@@ -27,8 +27,8 @@
                 height:200px;            
             }
         </style>
-        <script src="https://raw.github.com/KoryNunn/crel/master/crel.js"></script>
-        <script src="gel/gel.js"></script>
+        <script src="../crel/crel.js"></script>
+        <script src="../gel/gel.js"></script>
         <script src="gedi.js"></script>
         <script>
         window.onload = function(){
@@ -123,6 +123,20 @@
                             test.result = true;
                         });
                         gedi.set('[thing]', 'stuff');
+                    },
+                    expected: true
+                },
+                {
+                    name: "array bind",
+                    test: function(){
+                        var gedi = new Gedi(),
+                            test = this;
+                        
+                        gedi.set('[things]', []);
+                        gedi.bind('[things]', function(){
+                            test.result = true;
+                        });
+                        gedi.set('[things/0]', 'stuff');
                     },
                     expected: true
                 },
