@@ -116,7 +116,7 @@
                     }
                     else if(substring.charAt(index) === ']'){                        
                         var original = substring.slice(0, index+1);
-                        
+
                         return new gel.Token(
                             this,
                             original,
@@ -186,10 +186,15 @@
         //
         //***********************************************
 
+        var memoiseCache = {};
 
         // Lots of similarities between get and set, refactor later to reuse code.
         function get(path, model) {
             if (path) {
+                var memoiseObject = memoiseCache[path.toString()];
+                if(memoiseObject && memoiseObject.model === model){
+                    return memoiseObject.value;
+                }
 
                 var reference = model;
 
@@ -225,6 +230,11 @@
                     }
                 });
 
+                memoiseCache[path.toString()] = {
+                    model: model,
+                    value: reference
+                };
+
                 return reference;
             }
             return model;
@@ -258,6 +268,8 @@
             if (!path) {
                 return;
             }
+
+            memoiseCache = {};
 
             // If you just pass in an object, you are overwriting the model.
             if (typeof path === "object" && !(path instanceof Path) && !(path instanceof Expression)) {
@@ -351,10 +363,8 @@
             function triggerListeners(reference, sink) {
                 if (reference != undefined && reference !== null) {
                     reference.fastEach(function (callback) {
-                    
-                        var token = modelGet(callback.binding, callback.parentPath, true).pop();
 
-                        callback({target:target, value: token.result, token: token});
+                        callback({target:target, value: modelGet(callback.binding, callback.parentPath)});
 
                     });
                     if (sink) {
@@ -616,19 +626,25 @@
         //
         //***********************************************
 
-        function modelGet(binding, parentPath, asTokens) {
+        function modelGet(binding, parentPath, scope) {
+            if(parentPath && !(typeof parentPath === "string" || parentPath instanceof Path)){
+                scope = parentPath;
+                parentPath = new Path();
+            }
+
             if (binding && gel) {
                 var gelResult,
-                    expression = binding,
-                    context = {
-                        "_gediModelContext_": parentPath
-                    };
+                    expression = binding;
+
+                scope = scope || {};
+
+                scope['_gediModelContext_'] = parentPath;
 
                 if (binding instanceof Path || binding instanceof Expression) {
                     expression = binding.toString();
                 }
 
-                return gel.evaluate(expression, context, asTokens);
+                return gel.evaluate(expression, scope);
             }
             
             parentPath = parentPath || new Path();
@@ -791,6 +807,8 @@
         //
         //***********************************************
 
+        var memoisedPathTokens = {};
+
         function Path(path) {
             var pathInstance = this,
                 absolute = false;
@@ -800,13 +818,15 @@
                 return path.slice();
             }
 
-            // passed in an Expression or an 'expression formatted' Path (eg: '[bla]')
-            if ((typeof path === "string" && path.charAt(0) === gediConstructor.pathStart) || path instanceof Expression) {
+            // passed in an Expression or an 'expression formatted' Path (eg: '[bla]')            
+            if(memoisedPathTokens[path]){
+                path = memoisedPathTokens[path];
+            }else if ((typeof path === "string" && path.charAt(0) === gediConstructor.pathStart) || path instanceof Expression) {
                 var pathString = path.toString(),
                     detectedPathToken = detectPathToken(pathString);
 
                 if (detectedPathToken && detectedPathToken.length === pathString.length) {
-                    path = detectedPathToken.original.replace(/\\\]/g, "]").replace(/\\\[/g, "[").slice(1,-1);
+                    path = memoisedPathTokens[pathString] = detectedPathToken.original.replace(/\\\]/g, "]").replace(/\\\[/g, "[").slice(1,-1);
                 } else {
                     path = "";
                     console.warn('Invalid Path syntax');

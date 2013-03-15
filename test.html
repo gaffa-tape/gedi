@@ -782,7 +782,8 @@
 
             function runTests(){
                 var errors = [],
-                    passed = 0;
+                    passed = 0,
+                    startTime = new Date();
                     
                 for(var i = 0; i < tests.length; i++){
                     var test = tests[i],
@@ -818,6 +819,8 @@
                     
                     resultsElement.appendChild(resultElement);
                 }
+                
+                console.log('Runtime: ' + (new Date() - startTime));
                 
                 for(var i = 0; i < errors.length; i++){
                     console.error(errors[i]);
