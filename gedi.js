@@ -142,7 +142,7 @@
                 tokenise:detectPathToken,
                 parse: function(){},
                 evaluate: function(scope){
-                    this.result = get(Path.parse(scope._gediModelContext_).append(this.original), model);
+                    this.result = get(Path.parse(scope.get('_gediModelContext_')).append(this.original), model);
                 }
             };
 
@@ -154,7 +154,7 @@
 
             gel.functions.getAllDirty = function (scope, args) {
                 var pathToken = args.raw()[0],
-                    path = Path.parse(scope._gediModelContext_).append((pathToken && pathToken.name === 'gediPathToken') ? pathToken.original : new Path()),
+                    path = Path.parse(scope.get('_gediModelContext_')).append((pathToken && pathToken.name === 'gediPathToken') ? pathToken.original : new Path()),
                     source = get(path, model),
                     result,
                     itemPath;
@@ -204,9 +204,11 @@
                     return reference;
                 }
 
-                path.fastEach(function (key, index) {
+                for(var index = 0; index < path.length; index++){
+                    var key = path[index];
+
                     if (reference === null || reference === undefined) {
-                        return true;
+                        break;
                     } else if (typeof reference[key] === "object") {
                         reference = reference[key];
 
@@ -217,7 +219,7 @@
                     }
                     else if (reference[key] === undefined) {
                         reference = undefined;
-                        return true;
+                        break;
 
                     /*
                     otherwise, we're at the end of the line. return whatever's
@@ -226,9 +228,9 @@
                     }
                     else {
                         reference = reference[key];
-                        return true;
+                        break;
                     }
-                });
+                }
 
                 memoiseCache[path.toString()] = {
                     model: model,
@@ -286,7 +288,8 @@
 
             var reference = model;
 
-            path.fastEach(function (key, index, path) {
+            for(var index = 0; index < path.length; index++){
+                var key = path[index];
                 
                 // if we have hit a non-object property on the reference and we have more keys after this one
                 // make an object (or array) here and move on.
@@ -306,7 +309,7 @@
                 else {
                     reference = reference[key];
                 }
-            });
+            }
         }
 
         //***********************************************
@@ -320,7 +323,8 @@
 
             path = Path.parse(path);
 
-            path.fastEach(function (key, index, path) {
+            for(var index = 0; index < path.length; index++){
+                var key = path[index];                
                 //if we have hit a non-object and we have more keys after this one,
                 //return true to break out of the fastEach loop.
                 if (typeof reference[key] !== "object" && index < path.length - 1) {
@@ -339,7 +343,7 @@
                 else {
                     reference = reference[key];
                 }
-            });
+            }
         }
 
         
@@ -362,11 +366,18 @@
 
             function triggerListeners(reference, sink) {
                 if (reference != undefined && reference !== null) {
-                    reference.fastEach(function (callback) {
+                for(var index = 0; index < reference.length; index++){
+                    var callback = reference[index];
 
-                        callback({target:target, value: modelGet(callback.binding, callback.parentPath)});
+                        callback({
+                            target: target, 
+                            getValue: function(scope){
+                                return modelGet(callback.binding, callback.parentPath, scope);
+                            }
+                        });
 
-                    });
+
+                    }
                     if (sink) {
                         for (var key in reference) {
                             if (reference.hasOwnProperty(key) && Array.isArray(reference[key])) {
@@ -377,7 +388,8 @@
                 }
             }
 
-            path.fastEach(function (key) {
+            for(var index = 0; index < path.length; index++){
+                var key = path[index];
 
                 if (!isNaN(key) || Array.prototype.hasOwnProperty(key)) {
                     key = "_" + key;
@@ -387,7 +399,7 @@
                     reference = reference[key];
                     references.push(reference);
                 }
-            });
+            }
 
             triggerListeners(references.pop(), true);
 
@@ -459,7 +471,8 @@
                 return;
             }
 
-            path.fastEach(function (key, index, path) {
+            for(var index = 0; index < path.length; index++){
+                var key = path[index];
 
                 //escape properties of the array with an underscore.
                 // numbers mean a binding has been set on an array index.
@@ -483,7 +496,7 @@
                 else {
                     reference = reference[key];
                 }
-            });
+            };
         }
 
 
@@ -550,11 +563,12 @@
 
             if (gel) {
                 var tokens = gel.tokenise(expressionString);
-                tokens.fastEach(function (token) {
+                for(var index = 0; index < tokens.length; index++){
+                var token = tokens[index];
                     if(token.name === 'gediPathToken'){
                         paths.push(Path.parse(token.original));
                     }
-                });
+                }
             } else {
                 return [Path.parse(expressionString)];
             }
@@ -588,17 +602,19 @@
         //***********************************************
 
         function getAbsolutePath() {
-            var args = Array.prototype.slice.call(arguments),
-                absoluteParts = [];
+            var absoluteParts = [];
 
-            args.fastEach(function (path) {
+            for(var i = 0; i < arguments.length; i++){
+                var path = arguments[i];
+
                 if(!(path instanceof Path)){
                     path = Path.parse(path);
                 }
 
-                path.fastEach(function (pathPart, partIndex, parts) {
+                for(var index = 0; index < path.length; index++){
+                    var pathPart = path[index];
 
-                    if(parts.length === 1 && pathPart === ''){
+                    if(path.length === 1 && pathPart === ''){
                         // Empty path, maintain parent path.
                     } else if (pathPart === gediConstructor.upALevel) {
                         // Up a level? Remove the last item in absoluteParts
@@ -613,8 +629,8 @@
                         absoluteParts.push(pathPart);
 
                     }
-                });
-            });
+                }
+            }
 
             // Convert the absoluteParts to a Path.
             return new Path(absoluteParts);
@@ -809,10 +825,26 @@
 
         var memoisedPathTokens = {};
 
-        function Path(path) {
-            var pathInstance = this,
-                absolute = false;
+        function pathTokenToPath(pathToken){
+            var result = pathToken.original.slice(1,-1);
 
+            if(result.indexOf('\\') < 0){
+                return result;
+            }
+
+            for(var i = 0; i < result.length; i++){
+                if(result.charAt(i) === '\\'){
+                    if(result.charAt(i+1) === '\\' || result.charAt(i+1) === ']' || result.charAt(i+1) === '['){
+                        result = result.slice(0, i) + result.slice(i + 1);
+                    }
+                }
+            }
+
+            return result;
+        }
+
+        function constructPath(instance, path){
+            
             //Passed a Path? pass it back.
             if (path instanceof Path) {
                 return path.slice();
@@ -826,7 +858,7 @@
                     detectedPathToken = detectPathToken(pathString);
 
                 if (detectedPathToken && detectedPathToken.length === pathString.length) {
-                    path = memoisedPathTokens[pathString] = detectedPathToken.original.replace(/\\\]/g, "]").replace(/\\\[/g, "[").slice(1,-1);
+                    path = memoisedPathTokens[pathString] = pathTokenToPath(detectedPathToken);
                 } else {
                     path = "";
                     console.warn('Invalid Path syntax');
@@ -835,16 +867,27 @@
 
             if(typeof path === 'string'){
                 //passed a string or array? make a new Path.
-                path.split(gediConstructor.pathSeparator).fastEach(function (key) {
-                    pathInstance.push(key);
-                });
+                var pathParts = path.split(gediConstructor.pathSeparator);
+
+                while(pathParts.length){
+                    instance.push(pathParts.shift());
+                }
+
             } else if (path instanceof Array) {
-                path.fastEach(function (key) {
-                    pathInstance.push(key);
-                });
+                var pathParts = path.slice();
+
+                while(pathParts.length){
+                    instance.push(pathParts.shift());
+                }
             }
 
-            pathInstance.original = path;
+            instance.original = path;
+
+            return instance;
+        }
+
+        function Path(path) {
+            return constructPath(this, path);
         }
         Path.prototype = inheritFromArray();
         Path.prototype.push = Path.prototype.push || function () {
@@ -869,10 +912,9 @@
             return new Path(Array.prototype.splice.apply(this, arguments));
         };
         Path.prototype.append = function () {
-            var args = Array.prototype.slice.call(arguments),
-                newPath = this.slice();
+            var args = Array.prototype.slice.call(arguments);
 
-            return getAbsolutePath.apply(this, [this].concat(args));
+            return getAbsolutePath.apply(undefined, [this].concat(args));
         };
         Path.prototype.last = function () {
             return this[this.length - 1];

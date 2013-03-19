@@ -244,10 +244,10 @@
                         test.result = "";
                         
                         gedi.bind('[thing]', function(event){
-                            test.result += "thing: " + event.value;
+                            test.result += "thing: " + event.getValue();
                         });
                         gedi.bind('[thing/stuff/majigger]', function(event){
-                            test.result += "thing/stuff/majigger: " + event.value + " ";
+                            test.result += "thing/stuff/majigger: " + event.getValue() + " ";
                         });
                         
                         gedi.set('[thing/stuff/majigger]', 20);
@@ -263,10 +263,10 @@
                         test.result = "";
                         
                         gedi.bind('[thing]', function(event){
-                            test.result += "thing: " + event.value;
+                            test.result += "thing: " + event.getValue();
                         });
                         gedi.bind('[thing/stuff/majigger]', function(event){
-                            test.result += "thing/stuff/majigger: " + event.value + " ";
+                            test.result += "thing/stuff/majigger: " + event.getValue() + " ";
                         });
                         
                         gedi.remove('[thing/stuff/majigger]');
@@ -280,7 +280,7 @@
                             test = this;
                         
                         gedi.bind('(/ [thing/stuff/majigger] 2)', function(event){
-                            test.result = event.value;
+                            test.result = event.getValue();
                         });
                         
                         gedi.set('[thing/stuff/majigger]', 20);
@@ -296,11 +296,11 @@
                         test.result = "";
                         
                         gedi.bind('(length (filter [majigger] {item (!= item null)}))', function(event){
-                            test.result += event.value;
+                            test.result += event.getValue();
                         },'[thing/stuff]');
                         
                         gedi.bind('[thing/stuff]', function(event){
-                            test.result += event.value;
+                            test.result += event.getValue();
                         });
                         
                         gedi.set('[thing/stuff/majigger/3]', 'hello');
