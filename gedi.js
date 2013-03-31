@@ -25,6 +25,8 @@
         expressionsRequireGel: 'Gel is required to use Expressions in Gedi'
     };
 
+    var arrayProto = [];
+
 
     //***********************************************
     //
@@ -196,7 +198,8 @@
                     return memoiseObject.value;
                 }
 
-                var reference = model;
+                var reference = model,
+                    index = 0;
 
                 path = Path.parse(path);
                 
@@ -204,27 +207,17 @@
                     return reference;
                 }
 
-                for(var index = 0; index < path.length; index++){
+                if(path.isAbsolute()){
+                    index = 1;
+                }
+
+                for(; index < path.length; index++){
                     var key = path[index];
 
                     if (reference === null || reference === undefined) {
                         break;
                     } else if (typeof reference[key] === "object") {
                         reference = reference[key];
-
-                    /*
-                    else if there isn't anything at this key, exit the loop,
-                    and return undefined.
-                    */
-                    }
-                    else if (reference[key] === undefined) {
-                        reference = undefined;
-                        break;
-
-                    /*
-                    otherwise, we're at the end of the line. return whatever's
-                    there
-                    */
                     }
                     else {
                         reference = reference[key];
@@ -286,9 +279,15 @@
                 return;
             }
 
+            var index = 0;
+
+            if(path.isAbsolute()){
+                index = 1;
+            }
+
             var reference = model;
 
-            for(var index = 0; index < path.length; index++){
+            for(; index < path.length; index++){
                 var key = path[index];
                 
                 // if we have hit a non-object property on the reference and we have more keys after this one
@@ -321,26 +320,37 @@
         function remove(path, model) {
             var reference = model;
 
+            memoiseCache = {};
+
             path = Path.parse(path);
 
-            for(var index = 0; index < path.length; index++){
+            if(path.isRoot()){                
+                overwriteModel({}, model);
+                return;
+            }
+
+            var index = 0;
+
+            if(path.isAbsolute()){
+                index = 1;
+            }
+
+            for(; index < path.length; index++){
                 var key = path[index];                
                 //if we have hit a non-object and we have more keys after this one,
                 //return true to break out of the fastEach loop.
                 if (typeof reference[key] !== "object" && index < path.length - 1) {
-                    return true;
+                    break;
                 }
                 if (index === path.length - 1) {
                     // if we are at the end of the line, delete the last key
 
-                    if (!isNaN(reference.length)) {
+                    if (reference instanceof Array) {
                         reference.splice(key, 1);
                     } else {
                         delete reference[key];
                     }
-                }
-                    //otherwise, RECURSANIZE!
-                else {
+                } else {
                     reference = reference[key];
                 }
             }
@@ -388,10 +398,16 @@
                 }
             }
 
-            for(var index = 0; index < path.length; index++){
+            var index = 0;
+
+            if(path.isAbsolute()){
+                index = 1;
+            }
+
+            for(; index < path.length; index++){
                 var key = path[index];
 
-                if (!isNaN(key) || Array.prototype.hasOwnProperty(key)) {
+                if (!isNaN(key) || key in arrayProto) {
                     key = "_" + key;
                 }
 
@@ -401,13 +417,15 @@
                 }
             }
 
-            triggerListeners(references.pop(), true);
+            // Top down, less likely to cause changes this way.
 
-            while (references.length) {
-                var reference = references.pop();
+            while (references.length > 1) {
+                var reference = references.shift();
 
                 triggerListeners(reference);
             }
+
+            triggerListeners(references.pop(), true);
         }
 
         //***********************************************
@@ -471,13 +489,19 @@
                 return;
             }
 
-            for(var index = 0; index < path.length; index++){
+            var index = 0;
+
+            if(path.isAbsolute()){
+                index = 1;
+            }
+
+            for(; index < path.length; index++){
                 var key = path[index];
 
                 //escape properties of the array with an underscore.
                 // numbers mean a binding has been set on an array index.
                 // array property bindings like length can also be set, and thats why all array properties are escaped.
-                if (!isNaN(key) || [].hasOwnProperty(key)) {
+                if (!isNaN(key) || key in arrayProto) {
                     key = "_" + key;
                 }
 
@@ -601,7 +625,7 @@
         //
         //***********************************************
 
-        function getAbsolutePath() {
+        function resolvePath() {
             var absoluteParts = [];
 
             for(var i = 0; i < arguments.length; i++){
@@ -614,7 +638,7 @@
                 for(var index = 0; index < path.length; index++){
                     var pathPart = path[index];
 
-                    if(path.length === 1 && pathPart === ''){
+                    if(path.length === 0){
                         // Empty path, maintain parent path.
                     } else if (pathPart === gediConstructor.upALevel) {
                         // Up a level? Remove the last item in absoluteParts
@@ -622,7 +646,7 @@
 
                     } else if (pathPart === gediConstructor.rootPath) {
                         // Root path? Do nothing
-                        absoluteParts = [];
+                        absoluteParts = [''];
 
                     } else {
                         // any following valid part? Add it to the absoluteParts.
@@ -665,7 +689,7 @@
             
             parentPath = parentPath || new Path();
             
-            binding = getAbsolutePath(parentPath, binding);
+            binding = resolvePath(parentPath, binding);
             
             return get(binding, model);
         }
@@ -735,7 +759,21 @@
 
             path = Path.parse(path);
 
-            path.fastEach(function (key, index) {
+            if(path.isRoot()){                
+                dirtyModel = {
+                    '_isDirty_': dirty
+                };
+                return;
+            }
+
+            var index = 0;
+
+            if(path.isAbsolute()){
+                index = 1;
+            }
+
+            for(; index < path.length; index++){
+                var key = path[index];
                 if ((typeof reference[key] !== "object" || reference[key] === null) && index < path.length - 1) {
                     reference[key] = {};
                 }
@@ -746,7 +784,7 @@
                 else {
                     reference = reference[key];
                 }
-            });
+            }
             
             if(!path.length){
                 dirtyModel['_isDirty_'] = dirty;
@@ -798,8 +836,7 @@
             if (inheritFromArray.canInherit) {
                 return new Array();
             } else {
-                var tempPrototype = {},
-                    arrayProto = [];
+                var tempPrototype = {};
                 for (var key in arrayProto) {
                     tempPrototype[key] = arrayProto[key];
                 }
@@ -860,14 +897,26 @@
                 if (detectedPathToken && detectedPathToken.length === pathString.length) {
                     path = memoisedPathTokens[pathString] = pathTokenToPath(detectedPathToken);
                 } else {
-                    path = "";
                     console.warn('Invalid Path syntax');
                 }
             }
 
             if(typeof path === 'string'){
                 //passed a string or array? make a new Path.
-                var pathParts = path.split(gediConstructor.pathSeparator);
+
+                var pathParts;
+                if(path.indexOf(gediConstructor.pathSeparator) >= 0){
+                    pathParts = path.split(gediConstructor.pathSeparator);
+                    if(pathParts[0] === '' && pathParts[1] === ''){
+                        pathParts.pop();
+                    }
+                }else{
+                    if(path === ''){
+                        pathParts = [];
+                    }else{
+                        pathParts = [path];
+                    }
+                }
 
                 while(pathParts.length){
                     instance.push(pathParts.shift());
@@ -914,13 +963,16 @@
         Path.prototype.append = function () {
             var args = Array.prototype.slice.call(arguments);
 
-            return getAbsolutePath.apply(undefined, [this].concat(args));
+            return resolvePath.apply(undefined, [this].concat(args));
         };
         Path.prototype.last = function () {
             return this[this.length - 1];
         };
         Path.prototype.isRoot = function () {
-            return (this.length === 1 && this[0] === gediConstructor.rootPath) || this.length === 0;
+            return (this.length === 1 && this.isAbsolute()) || this.length === 0;
+        };
+        Path.prototype.isAbsolute = function () {
+            return this[0] === gediConstructor.rootPath;
         };
         Path.prototype.toJSON = function(){
             return this.toString();

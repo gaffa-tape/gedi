@@ -211,67 +211,71 @@
                 {
                     name: "remove scoped bind",
                     test: function(){
-                        var gedi = new Gedi({thing:[{},2,3]}),
+                        var gedi = new Gedi({a:1,b:2,c:3}),
                             test = this;
                             
                         this.result = 0;
                         
                         // Object binding SHOULD fire
-                        gedi.bind('[thing]', function(){
+                        gedi.bind('[]', function(){
                             test.result++;
                         });
                         
                         // target binding SHOULD fire
-                        gedi.bind('[thing/2]', function(){
+                        gedi.bind('[a]', function(){
                             test.result++;
                         });
                         
                         // Sibling binding should NOT fire
-                        gedi.bind('[thing/3]', function(){
+                        gedi.bind('[b]', function(){
                             test.result++;
                         });
                         
-                        gedi.remove('[thing/2]');
+                        gedi.remove('[a]');
                     },
                     expected: 2
                 },
                 {
-                    name: "bind bubbled event.value",
+                    name: "bind bubbled event.getValue()",
                     test: function(){
                         var gedi = new Gedi({thing:{stuff:{majigger:10}}}),
                             test = this;
                         
-                        test.result = "";
+                        test.result = {};
                         
                         gedi.bind('[thing]', function(event){
-                            test.result += "thing: " + event.getValue();
+                            test.result.thing = event.getValue();
                         });
                         gedi.bind('[thing/stuff/majigger]', function(event){
-                            test.result += "thing/stuff/majigger: " + event.getValue() + " ";
+                            test.result.majigger = event.getValue();
                         });
                         
                         gedi.set('[thing/stuff/majigger]', 20);
+
+                        test.result = JSON.stringify(test.result);
                     },
-                    expected: "thing/stuff/majigger: 20 thing: [object Object]"
+                    expected: '{"thing":{"stuff":{"majigger":20}},"majigger":20}'
                 },
                 {
-                    name: "bind bubbled event.value",
+                    name: "bind bubbled event.getValue() remove",
                     test: function(){
                         var gedi = new Gedi({thing:{stuff:{majigger:10}}}),
                             test = this;
                         
-                        test.result = "";
+                        test.result = {};
                         
                         gedi.bind('[thing]', function(event){
-                            test.result += "thing: " + event.getValue();
+                            test.result.thing = event.getValue();
                         });
                         gedi.bind('[thing/stuff/majigger]', function(event){
-                            test.result += "thing/stuff/majigger: " + event.getValue() + " ";
+                            test.result.majigger = event.getValue();
                         });
                         
                         gedi.remove('[thing/stuff/majigger]');
+
+                        test.result = JSON.stringify(test.result);
                     },
-                    expected: "thing/stuff/majigger: undefined thing: [object Object]"
+                    expected: '{"thing":{"stuff":{}}}'
                 },
                 {
                     name: "bind expression event.value",
@@ -288,24 +292,26 @@
                     expected: 10
                 },
                 {
-                    name: "bind expression event.value complex",
+                    name: "bind expression event.getValue() complex",
                     test: function(){
                         var gedi = new Gedi({thing:{stuff:{majigger:[true,false,true]}}}),
                             test = this;
                         
-                        test.result = "";
+                        test.result = {};
                         
                         gedi.bind('(length (filter [majigger] {item (!= item null)}))', function(event){
-                            test.result += event.getValue();
+                            test.result.length = event.getValue();
                         },'[thing/stuff]');
                         
                         gedi.bind('[thing/stuff]', function(event){
-                            test.result += event.getValue();
+                            test.result.stuff = event.getValue();
                         });
                         
                         gedi.set('[thing/stuff/majigger/3]', 'hello');
+
+                        test.result = JSON.stringify(test.result);
                     },
-                    expected: '4[object Object]'
+                    expected: '{"stuff":{"majigger":[true,false,true,"hello"]},"length":4}'
                 },
                 {
                     name: "relative get",
@@ -775,6 +781,46 @@
                         gedi.set('[things]', 'majigger');
                     },
                     expected: 2
+                },
+                {
+                name: "empty path",
+                    test: function(){
+                        var gedi = new Gedi(),
+                            path = new gedi.Path();
+
+                        this.result = path.length;
+                    },
+                    expected: 0
+                },
+                {
+                name: "root path",
+                    test: function(){
+                        var gedi = new Gedi(),
+                            path = new gedi.Path('[/]');
+
+                        this.result = path.length === 1 && path.isRoot();
+                    },
+                    expected: true
+                },
+                {
+                name: "absolute path",
+                    test: function(){
+                        var gedi = new Gedi(),
+                            path = new gedi.Path('[/majigger]');
+
+                        this.result = path.length === 2 && path.isAbsolute();
+                    },
+                    expected: true
+                },
+                {
+                name: "relative path",
+                    test: function(){
+                        var gedi = new Gedi(),
+                            path = new gedi.Path('[majigger]');
+
+                        this.result = path.length === 1 && path.isAbsolute();
+                    },
+                    expected: false
                 }
             ];
             
