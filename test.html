@@ -28,6 +28,7 @@
             }
         </style>
         <script src="../crel/crel.js"></script>
+        <script src="../lang/lang.js"></script>
         <script src="../gel/gel.js"></script>
         <script src="gedi.js"></script>
         <script>
@@ -42,6 +43,15 @@
                         this.result = gedi.get('[thing]');
                     },
                     expected: 'stuff'
+                },
+                {
+                    name: "basic too-deep get",
+                    test: function(){
+                        var gedi = new Gedi({thing:'stuff'});
+                        
+                        this.result = gedi.get('[thing/stuff]');
+                    },
+                    expected: undefined
                 },
                 {
                     name: "nested get",
@@ -821,6 +831,18 @@
                         this.result = path.length === 1 && path.isAbsolute();
                     },
                     expected: false
+                },
+                {
+                name: "append path",
+                    test: function(){
+                        var gedi = new Gedi(),
+                            path = new gedi.Path('[majigger]');
+
+                        path = path.append('[../stuff]')
+
+                        this.result = path.toString();
+                    },
+                    expected: '[majigger/../stuff]'
                 }
             ];
             
@@ -843,7 +865,7 @@
                     try{
                         test.test.call(test);
                     }catch(error){
-                        errors.push(error.toString());
+                        errors.push(error.toString() + error.stack);
                         hasError = true;
                     }
                     test.passed = test.result === test.expected && !hasError;

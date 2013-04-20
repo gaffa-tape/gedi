@@ -63,7 +63,7 @@
         //IE Specific idiocy
 
         Array.prototype.indexOf = Array.prototype.indexOf || function (object) {
-            this.fastEach(function (value, index) {
+            fastEach(this, function (value, index) {
                 if (value === object) {
                     return index;
                 }
@@ -87,15 +87,15 @@
         //
         //***********************************************
 
-        Array.prototype.fastEach = Array.prototype.fastEach || function (callback) {
-            for (var i = 0; i < this.length; i++) {
-                if (callback(this[i], i, this)) break;
+        function fastEach(array, callback) {
+            for (var i = 0; i < array.length; i++) {
+                if (callback(array[i], i, array)) break;
             }
-            return this;
+            return array;
         };
         
         function pathTokenCallback(value, scopedVariables) {
-            return get(Path.parse(scopedVariables._gediModelContext_).append(value), model);
+            return get(resolvePath(scopedVariables._gediModelContext_, value), model);
         }
 
 
@@ -119,7 +119,7 @@
                     else if(substring.charAt(index) === ']'){                        
                         var original = substring.slice(0, index+1);
 
-                        return new gel.Token(
+                        return new Lang.Token(
                             this,
                             original,
                             original.length
@@ -139,24 +139,25 @@
         if (window.Gel) {
             gel = new window.Gel();
             
-            gel.tokenConverters.primitives.path = {
+            gel.tokenConverters.push({
                 name: 'gediPathToken',
+                precedence:4,
                 tokenise:detectPathToken,
                 parse: function(){},
                 evaluate: function(scope){
-                    this.result = get(Path.parse(scope.get('_gediModelContext_')).append(this.original), model);
+                    this.result = get(resolvePath(scope.get('_gediModelContext_'), this.original), model);
                 }
-            };
+            });
 
-            gel.functions.isDirty = function(scope, args){
+            gel.scope.isDirty = function(scope, args){
                 var pathToken = args.raw()[0];
                 
                 return isDirty((pathToken && pathToken.name === 'gediPathToken') ? pathToken.original : new Path());                              
             }
 
-            gel.functions.getAllDirty = function (scope, args) {
+            gel.scope.getAllDirty = function (scope, args) {
                 var pathToken = args.raw()[0],
-                    path = Path.parse(scope.get('_gediModelContext_')).append((pathToken && pathToken.name === 'gediPathToken') ? pathToken.original : new Path()),
+                    path = resolvePath(scope.get('_gediModelContext_'), (pathToken && pathToken.name === 'gediPathToken') && pathToken.original),
                     source = get(path, model),
                     result,
                     itemPath;
@@ -169,7 +170,7 @@
 
                 for (var key in source) {
                     if (source.hasOwnProperty(key)) {
-                        itemPath = path.append(key);
+                        itemPath = resolvePath(path, key);
                         if (result instanceof Array) {
                             isDirty(itemPath) && result.push(source[key]);
                         } else {
@@ -221,6 +222,12 @@
                     }
                     else {
                         reference = reference[key];
+
+                        // If there are still keys in the path that have not been accessed,
+                        // return undefined.
+                        if(index < path.length - 1){
+                            reference = undefined;
+                        }
                         break;
                     }
                 }
@@ -337,8 +344,7 @@
 
             for(; index < path.length; index++){
                 var key = path[index];                
-                //if we have hit a non-object and we have more keys after this one,
-                //return true to break out of the fastEach loop.
+                //if we have hit a non-object and we have more keys after this one
                 if (typeof reference[key] !== "object" && index < path.length - 1) {
                     break;
                 }
@@ -469,7 +475,7 @@
             if (!(binding instanceof Path)) {
                 var paths = Expression.parse(binding).paths;
 
-                paths.fastEach(function (path) {
+                fastEach(paths, function (path) {
                     setBinding(path, callback, parentPath);
                 });
                 return;
@@ -480,7 +486,7 @@
             callback.references.push(path);
                         
             if (parentPath) {
-                path = Path.parse(parentPath).append(path);
+                path = resolvePath(parentPath, path);
             }
             
             if(path.isRoot()){
@@ -540,7 +546,7 @@
             
             if(path == null){
                 if(callback != null && callback.references){
-                    callback.references.fastEach(function(path){
+                    fastEach(callback.references, function(path){
                         removeBinding(path, callback);
                     });
                     return;
@@ -551,7 +557,7 @@
             }
             
             if(!(path instanceof Path)){
-                Expression.parse(path).paths.fastEach(function(path){
+                fastEach(Expression.parse(path).paths, function(path){
                     removeBinding(path, callback);
                 });
                 return;
@@ -566,7 +572,7 @@
                 return;
             }
             
-            callbacks.fastEach(function(handler, index, callbacks){
+            fastEach(callbacks, function(handler, index, callbacks){
                 if(handler === callback){
                     callbacks.splice(index, 1);
                     return true;
@@ -712,8 +718,7 @@
             
             parentPath = parentPath || new Path();
             
-            path = new Path(parentPath).append(path);
-            
+            path = new resolvePath(parentPath, path);            
 
             setDirtyState(path, dirty);
             set(path, value, model);
@@ -734,8 +739,7 @@
             
             parentPath = parentPath || new Path();
             
-            path = new Path(parentPath).append(path);
-            
+            path = resolvePath(parentPath, path);            
             
             setDirtyState(path, dirty);
             remove(path, model);
@@ -961,9 +965,16 @@
             return new Path(Array.prototype.splice.apply(this, arguments));
         };
         Path.prototype.append = function () {
-            var args = Array.prototype.slice.call(arguments);
+            var args = Array.prototype.slice.call(arguments),
+                result = this.slice();
 
-            return resolvePath.apply(undefined, [this].concat(args));
+            fastEach(args, function(arg){
+                fastEach(Path.parse(arg), function(argPart){
+                    result.push(argPart);
+                });
+            });
+
+            return result;
         };
         Path.prototype.last = function () {
             return this[this.length - 1];
@@ -1008,7 +1019,7 @@
                 if(gel){
                 //passed a string or array? make a new Expression.
                     var tokens = gel.tokenise(expression);
-                    tokens.fastEach(function (key) {
+                    fastEach(tokens, function (key) {
                         self.push(key);
                     });
                 }else{
@@ -1018,7 +1029,7 @@
                         throw exceptions.expressionsRequireGel;
                     }
                     
-                    path.fastEach(function(key){
+                    fastEach(path, function(key){
                         self.push(key);
                     });
                 }
