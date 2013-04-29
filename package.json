@@ -1,0 +1,22 @@
+{
+    "name": "gedi",
+    "description": "An evented data API",
+    "author": "Kory Nunn <knunn187@gmail.com>",
+    "tags": [
+        "DOM"
+    ],
+    "version": "0.1.1",
+    "main": "gedi.js",
+    "dependencies": {
+        "gel-js":">= 0.0.0"  
+    },
+    "devDependencies": {},
+    "repository": {
+        "type": "git",
+        "url": "git://github.com/KoryNunn/gedi.git"
+    },
+    "bugs": {
+        "url": "http://github.com/KoryNunn/gedi/issues"
+    },
+    "contributors": []
+}
