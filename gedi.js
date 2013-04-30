@@ -13,8 +13,11 @@
         define(factory);
     } else {
         root.Gedi = factory();
-  }
+    }
+}(this, function(){
     "use strict";
+
+    var Gel = require('gel-js');
 
     //Create gedi
     var gediConstructor = newGedi;
@@ -126,7 +129,7 @@
                     else if(substring.charAt(index) === ']'){                        
                         var original = substring.slice(0, index+1);
 
-                        return new Lang.Token(
+                        return new Gel.Token(
                             this,
                             original,
                             original.length
@@ -143,52 +146,50 @@
         //
         //***********************************************
 
-        if (window.Gel) {
-            gel = new window.Gel();
-            
-            gel.tokenConverters.push({
-                name: 'gediPathToken',
-                precedence:4,
-                tokenise:detectPathToken,
-                parse: function(){},
-                evaluate: function(scope){
-                    this.result = get(resolvePath(scope.get('_gediModelContext_'), this.original), model);
-                }
-            });
+        gel = new Gel();
+        
+        gel.tokenConverters.push({
+            name: 'gediPathToken',
+            precedence:4,
+            tokenise:detectPathToken,
+            parse: function(){},
+            evaluate: function(scope){
+                this.result = get(resolvePath(scope.get('_gediModelContext_'), this.original), model);
+            }
+        });
 
-            gel.scope.isDirty = function(scope, args){
-                var pathToken = args.raw()[0];
+        gel.scope.isDirty = function(scope, args){
+            var pathToken = args.raw()[0];
+            
+            return isDirty((pathToken && pathToken.name === 'gediPathToken') ? pathToken.original : new Path());                              
+        }
+
+        gel.scope.getAllDirty = function (scope, args) {
+            var pathToken = args.raw()[0],
+                path = resolvePath(scope.get('_gediModelContext_'), (pathToken && pathToken.name === 'gediPathToken') && pathToken.original),
+                source = get(path, model),
+                result,
+                itemPath;
                 
-                return isDirty((pathToken && pathToken.name === 'gediPathToken') ? pathToken.original : new Path());                              
+            if (source == null) {
+                return null;
             }
 
-            gel.scope.getAllDirty = function (scope, args) {
-                var pathToken = args.raw()[0],
-                    path = resolvePath(scope.get('_gediModelContext_'), (pathToken && pathToken.name === 'gediPathToken') && pathToken.original),
-                    source = get(path, model),
-                    result,
-                    itemPath;
-                    
-                if (source == null) {
-                    return null;
-                }
+            result = source.constructor();
 
-                result = source.constructor();
-
-                for (var key in source) {
-                    if (source.hasOwnProperty(key)) {
-                        itemPath = resolvePath(path, key);
-                        if (result instanceof Array) {
-                            isDirty(itemPath) && result.push(source[key]);
-                        } else {
-                            isDirty(itemPath) && (result[key] = source[key]);
-                        }
+            for (var key in source) {
+                if (source.hasOwnProperty(key)) {
+                    itemPath = resolvePath(path, key);
+                    if (result instanceof Array) {
+                        isDirty(itemPath) && result.push(source[key]);
+                    } else {
+                        isDirty(itemPath) && (result[key] = source[key]);
                     }
                 }
+            }
 
-                return result;
-            };
-        }
+            return result;
+        };
 
         //***********************************************
         //
@@ -1023,23 +1024,11 @@
             self.original = expression;
 
             if (typeof expression === "string") {
-                if(gel){
                 //passed a string or array? make a new Expression.
-                    var tokens = gel.tokenise(expression);
-                    fastEach(tokens, function (key) {
-                        self.push(key);
-                    });
-                }else{
-                    var path = Path.parse(expression);
-                    
-                    if(path.toString() !== expression){
-                        throw exceptions.expressionsRequireGel;
-                    }
-                    
-                    fastEach(path, function(key){
-                        self.push(key);
-                    });
-                }
+                var tokens = gel.tokenise(expression);
+                fastEach(tokens, function (key) {
+                    self.push(key);
+                });
             }
             self.paths = getPathsInExpression(self);
         }
@@ -1107,4 +1096,4 @@
     }
 
     return gediConstructor;
-})();
+}));
