@@ -752,7 +752,7 @@ window.onload = function(){
                     
                 this.result = 0;
                 
-                gedi.bind('(concat [things][things])', callback);
+                gedi.bind('(concat [things][stuff])', callback);
                 
                 gedi.set('[things]', 'stuff');
                 
@@ -760,7 +760,7 @@ window.onload = function(){
                 
                 gedi.set('[things]', 'majigger');
             },
-            expected: 2
+            expected: 1
         },
         {
         name: "debind expression by callback",
@@ -774,17 +774,41 @@ window.onload = function(){
                     
                 this.result = 0;
                 
-                gedi.bind('(concat [things][things])', callback);
+                gedi.bind('(concat [things][stuff])', callback);
                 
                 gedi.set('[things]', 'stuff');
                 
                 gedi.debind(callback);
                 
                 gedi.set('[things]', 'majigger');
-                
+
                 gedi.set('[things]', 'whatsits');
             },
-            expected: 2
+            expected: 1
+        },
+        {
+        name: "debind relative expressions by callback",
+            test: function(){
+                var model = {thing:{}},
+                    gedi = new Gedi(model),
+                    test = this,
+                    callback = function(){
+                        test.result++;
+                    };
+                    
+                this.result = 0;
+                
+                gedi.bind('(concat [a][b])', callback, '[thing]');
+                
+                gedi.set('[thing/a]', 'stuff');
+                
+                gedi.debind(callback);
+                
+                gedi.set('[thing/b]', 'stuff');
+                
+                gedi.set('[thing/c]', 'stuff');
+            },
+            expected: 1
         },
         {
         name: "empty path",

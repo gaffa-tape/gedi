@@ -557,7 +557,7 @@
             if(path == null){
                 if(callback != null && callback.references){
                     fastEach(callback.references, function(path){                        
-                        removeBinding(resolvePath(parentPath, path), callback);
+                        removeBinding(path, callback);
                     });
                 }else{                    
                     internalBindings = [];
@@ -567,7 +567,7 @@
             
             if(!(path instanceof Path)){
                 fastEach(Expression.parse(path).paths, function(path){
-                    removeBinding(resolvePath(parentPath, path), callback);
+                    removeBinding(path, callback);
                 });
                 return;
             }
@@ -578,6 +578,10 @@
                 while(callbacks.length){
                     callbacks.pop();
                 }
+                return;
+            }
+
+            if(!callbacks){
                 return;
             }
             
