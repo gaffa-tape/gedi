@@ -490,16 +490,15 @@
             }
 
             path = binding;
-            
-            callback.references.push(path);
                         
             if (parentPath) {
-                path = resolvePath(parentPath, path);
+                path = resolvePath('[/]', parentPath, path);
             }
+            
+            callback.references.push(path);
             
             if(path.isRoot()){
                 reference.push(callback);
-                callback.references.push(path);
                 return;
             }
 
