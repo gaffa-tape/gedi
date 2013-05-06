@@ -763,6 +763,30 @@ window.onload = function(){
             expected: 2
         },
         {
+        name: "debind expression by callback",
+            test: function(){
+                var model = {},
+                    gedi = new Gedi(model),
+                    test = this,
+                    callback = function(){
+                        test.result++;
+                    };
+                    
+                this.result = 0;
+                
+                gedi.bind('(concat [things][things])', callback);
+                
+                gedi.set('[things]', 'stuff');
+                
+                gedi.debind(callback);
+                
+                gedi.set('[things]', 'majigger');
+                
+                gedi.set('[things]', 'whatsits');
+            },
+            expected: 2
+        },
+        {
         name: "empty path",
             test: function(){
                 var gedi = new Gedi(),

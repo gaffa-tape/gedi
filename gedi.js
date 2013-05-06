@@ -551,27 +551,28 @@
                 callback = path;
                 path = null;
             }
+
+            var parentPath = callback ? callback.parentPath : null;
             
             if(path == null){
                 if(callback != null && callback.references){
-                    fastEach(callback.references, function(path){
-                        removeBinding(path, callback);
+                    fastEach(callback.references, function(path){                        
+                        removeBinding(resolvePath(parentPath, path), callback);
                     });
-                    return;
+                }else{                    
+                    internalBindings = [];
                 }
-                    
-                internalBindings = [];
                 return;
             }
             
             if(!(path instanceof Path)){
                 fastEach(Expression.parse(path).paths, function(path){
-                    removeBinding(path, callback);
+                    removeBinding(resolvePath(parentPath, path), callback);
                 });
                 return;
-            }            
+            }
             
-            callbacks = get(path, internalBindings);
+            callbacks = get(resolvePath(parentPath, path), internalBindings);
             
             if(!callback){
                 while(callbacks.length){
