@@ -10,13 +10,18 @@
     "dependencies": {
         "gel-js":">= 0.0.0"  
     },
-    "devDependencies": {},
+    "devDependencies": {
+        "tape": "1.0.x"
+    },
     "repository": {
         "type": "git",
         "url": "git://github.com/KoryNunn/gedi.git"
     },
     "bugs": {
         "url": "http://github.com/KoryNunn/gedi/issues"
+    },
+    "scripts": {
+        "test": "./node_modules/.bin/tape test/all.js"
     },
     "contributors": []
 }
