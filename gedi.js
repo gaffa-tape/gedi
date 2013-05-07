@@ -8,16 +8,14 @@
 
 (function (root, factory) {
     if (typeof exports === 'object') {
-        module.exports = factory();
+        module.exports = factory(require('gel-js'));
     } else if (typeof define === 'function' && define.amd) {
-        define(factory);
+        define(['gel'], factory);
     } else {
-        root.Gedi = factory();
+        root.Gedi = factory(root.Gel);
     }
-}(this, function(){
+}(this, function(Gel){
     "use strict";
-
-    var Gel = require('gel-js');
 
     //Create gedi
     var gediConstructor = newGedi;
