@@ -173,6 +173,18 @@ The event.target property contains a path to the changed property, NOT the path 
     
 The event.getValue method returns the value at the path used to bind the callback.
 
+#### Binding to Paths with wildcards ####
+
+You can bind to paths containing wildcards to watch for changes to properties on items in an array:
+
+    model.bind('[thing/*/stuff/*/a]', function(event){
+        alert(event.getValue());
+    });
+
+    gedi.set('[thing/1/stuff/1/a]', 1); // will alert 2
+    gedi.set('[thing/2/stuff/2/b]', 2); // not trigger the callback, because the triggered path does not match the bound path
+
+
 ### Binding to an Expression ###
 
 if an Expression is passed to bind(), it will automatically detect every binding in the expression and set the callback to trigger when any referenced parts of the model changes.
@@ -187,15 +199,6 @@ if an Expression is passed to bind(), it will automatically detect every binding
     model.set('[a]', 'a is now truthy'); // will alert a
     
     model.set('[c]', 'c is now truthy'); // will alert a because a is already set, and it is truthy
-
-You can bind to paths containing wildcards to watch for changes to properties on items in an array:
-
-    model.bind('[thing/*/stuff/*/a]', function(event){
-        alert(event.getValue());
-    });
-
-    gedi.set('[thing/1/stuff/1/a]', 1); // will alert 2
-    gedi.set('[thing/2/stuff/2/b]', 2); // not trigger the callback, because the triggered path does not match the bound path
 
 Expressions with wildcards are not supported, as there is no logical way to handle an expression containing more than one wildcarded path.
     
