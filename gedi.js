@@ -421,9 +421,8 @@
                                 return modelGet(callbackBinding, parentPath, scope);
                             }
                         });
-
-
                     }
+                    
                     if (sink) {
                         for (var key in reference) {
                             if (reference.hasOwnProperty(key) && Array.isArray(reference[key])) {
