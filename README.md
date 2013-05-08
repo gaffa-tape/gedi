@@ -3,7 +3,7 @@ Gedi
 
 Gaffa evented data interface
 
-[![browser support](https://ci.testling.com/USER/PROJECT.png)](https://ci.testling.com/USER/PROJECT)
+[![browser support](https://ci.testling.com/gaffa-tape/gedi.png)](https://ci.testling.com/gaffa-tape/gedi)
 
 # What #
 
