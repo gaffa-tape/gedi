@@ -384,17 +384,41 @@
 
             var reference = internalBindings,
                 references = [reference],
-                target = path;
+                target = resolvePath('[/]', path);
 
             function triggerListeners(reference, sink) {
                 if (reference != undefined && reference !== null) {
-                for(var index = 0; index < reference.length; index++){
-                    var callback = reference[index];
+                    for(var index = 0; index < reference.length; index++){
+                        var callback = reference[index],
+                            callbackBinding = callback.binding,
+                            parentPath = callback.parentPath,
+                            wildcardIndex = callbackBinding.indexOf(gediConstructor.pathWildcard),
+                            wildcardMatchFail;
+
+                        if(wildcardIndex >= 0 && Expression.parse(callbackBinding).paths[0].toString() === callbackBinding.toString()){
+
+                            //fully resolve the callback path
+                            callbackBinding = resolvePath('[/]', callback.parentPath, callbackBinding);
+
+                            //null out the now not needed parent path
+                            parentPath = null;
+
+                            fastEach(callbackBinding, function(pathPart, i){
+                                if(pathPart === gediConstructor.pathWildcard){
+                                    callbackBinding[i] = target[i];
+                                }else if (pathPart !== target[i]){
+                                    return wildcardMatchFail = true;
+                                }
+                            });
+                            if(wildcardMatchFail){
+                                continue;
+                            }
+                        }
 
                         callback({
                             target: target, 
                             getValue: function(scope){
-                                return modelGet(callback.binding, callback.parentPath, scope);
+                                return modelGet(callbackBinding, parentPath, scope);
                             }
                         });
 
@@ -492,8 +516,15 @@
             if (parentPath) {
                 path = resolvePath('[/]', parentPath, path);
             }
-            
+
             callback.references.push(path);
+
+            // Handle wildcards
+
+            var firstWildcardIndex = path.indexOf(gediConstructor.pathWildcard);
+            if(firstWildcardIndex>=0){
+                path = path.slice(0, firstWildcardIndex);                
+            }
             
             if(path.isRoot()){
                 reference.push(callback);
