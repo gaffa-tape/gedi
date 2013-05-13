@@ -598,8 +598,19 @@
                 });
                 return;
             }
+
+            var resolvedPath = resolvePath(parentPath, path),
+                bindingPathParts = [];
+
+            for(var i = 0; i < resolvedPath.length; i++){
+                if(parseInt(resolvedPath[i]).toString() === resolvedPath[i]){
+                    bindingPathParts[i] = '_' + resolvedPath[i];
+                }else{
+                    bindingPathParts[i] = resolvedPath[i];
+                }
+            }
             
-            callbacks = get(resolvePath(parentPath, path), internalBindings);
+            callbacks = get(new Path(bindingPathParts), internalBindings);
             
             if(!callback){
                 while(callbacks.length){
