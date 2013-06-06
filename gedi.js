@@ -159,7 +159,7 @@
         gel.scope.isDirty = function(scope, args){
             var pathToken = args.raw()[0];
             
-            return isDirty((pathToken && pathToken.name === 'gediPathToken') ? pathToken.original : new Path());                              
+            return isDirty(resolvePath(scope.get('_gediModelContext_'), (pathToken && pathToken.name === 'gediPathToken') ? pathToken.original : new Path()));                              
         }
 
         gel.scope.getAllDirty = function (scope, args) {
