@@ -199,53 +199,54 @@
 
         // Lots of similarities between get and set, refactor later to reuse code.
         function get(path, model) {
-            if (path) {
-                var memoiseObject = memoiseCache[path.toString()];
-                if(memoiseObject && memoiseObject.model === model){
-                    return memoiseObject.value;
-                }
-
-                var reference = model,
-                    index = 0;
-
-                path = Path.parse(path);
-                
-                if(path.isRoot()){
-                    return reference;
-                }
-
-                if(path.isAbsolute()){
-                    index = 1;
-                }
-
-                for(; index < path.length; index++){
-                    var key = path[index];
-
-                    if (reference === null || reference === undefined) {
-                        break;
-                    } else if (typeof reference[key] === "object") {
-                        reference = reference[key];
-                    }
-                    else {
-                        reference = reference[key];
-
-                        // If there are still keys in the path that have not been accessed,
-                        // return undefined.
-                        if(index < path.length - 1){
-                            reference = undefined;
-                        }
-                        break;
-                    }
-                }
-
-                memoiseCache[path.toString()] = {
-                    model: model,
-                    value: reference
-                };
-
-                return reference;
+            if (!path) {
+                return model;
             }
-            return model;
+                
+            var memoiseObject = memoiseCache[path.toString()];
+            if(memoiseObject && memoiseObject.model === model){
+                return memoiseObject.value;
+            }
+
+            path = Path.parse(path);
+            
+            if(path.isRoot()){
+                return model;
+            }
+
+            var reference = model,
+                index = 0,
+                pathLength = path.length;
+
+            if(path.isAbsolute()){
+                index = 1;
+            }
+
+            for(; index < pathLength; index++){
+                var key = path[index];
+
+                if (reference == null) {
+                    break;
+                } else if (typeof reference[key] === "object") {
+                    reference = reference[key];
+                } else {
+                    reference = reference[key];
+
+                    // If there are still keys in the path that have not been accessed,
+                    // return undefined.
+                    if(index < pathLength - 1){
+                        reference = undefined;
+                    }
+                    break;
+                }
+            }
+
+            memoiseCache[path.toString()] = {
+                model: model,
+                value: reference
+            };
+
+            return reference;
         }
         
 
@@ -292,7 +293,8 @@
                 return;
             }
 
-            var index = 0;
+            var index = 0,
+                pathLength = path.length;
 
             if(path.isAbsolute()){
                 index = 1;
@@ -300,7 +302,7 @@
 
             var reference = model;
 
-            for(; index < path.length; index++){
+            for(; index < pathLength; index++){
                 var key = path[index];
                 
                 // if we have hit a non-object property on the reference and we have more keys after this one
@@ -313,7 +315,7 @@
                         reference[key] = {};
                     }
                 }
-                if (index === path.length - 1) {
+                if (index === pathLength - 1) {
                     // if we are at the end of the line, set to the model
                     reference[key] = value;
                 }
@@ -342,19 +344,20 @@
                 return;
             }
 
-            var index = 0;
+            var index = 0,
+                pathLength = path.length;
 
             if(path.isAbsolute()){
                 index = 1;
             }
 
-            for(; index < path.length; index++){
+            for(; index < pathLength; index++){
                 var key = path[index];                
                 //if we have hit a non-object and we have more keys after this one
                 if (typeof reference[key] !== "object" && index < path.length - 1) {
                     break;
                 }
-                if (index === path.length - 1) {
+                if (index === pathLength - 1) {
                     // if we are at the end of the line, delete the last key
 
                     if (reference instanceof Array) {
@@ -609,26 +612,23 @@
                     bindingPathParts[i] = resolvedPath[i];
                 }
             }
-            
-            callbacks = get(new Path(bindingPathParts), internalBindings);
-            
+
             if(!callback){
-                while(callbacks.length){
-                    callbacks.pop();
-                }
-                return;
+                set(bindingPathParts, [], internalBindings);
             }
+            
+            callbacks = get(bindingPathParts, internalBindings);            
 
             if(!callbacks){
                 return;
             }
-            
-            fastEach(callbacks, function(handler, index, callbacks){
-                if(handler === callback){
-                    callbacks.splice(index, 1);
-                    return true;
+
+            for (var i = 0; i < callbacks.length; i++) {                
+                if(callbacks[i] === callback){
+                    callbacks.splice(i, 1);
+                    return;
                 }
-            });
+            }
         }
 
 
@@ -936,11 +936,6 @@
         }
 
         function constructPath(instance, path){
-            
-            //Passed a Path? pass it back.
-            if (path instanceof Path) {
-                return path.slice();
-            }
 
             // passed in an Expression or an 'expression formatted' Path (eg: '[bla]')            
             if(memoisedPathTokens[path]){
@@ -957,8 +952,6 @@
             }
 
             if(typeof path === 'string'){
-                //passed a string or array? make a new Path.
-
                 var pathParts;
                 if(path.indexOf(gediConstructor.pathSeparator) >= 0){
                     pathParts = path.split(gediConstructor.pathSeparator);
@@ -977,11 +970,9 @@
                     instance.push(pathParts.shift());
                 }
 
-            } else if (path instanceof Array) {
-                var pathParts = path.slice();
-
-                while(pathParts.length){
-                    instance.push(pathParts.shift());
+            } else if (path instanceof Array || path instanceof Path) {
+                for (var i = 0; i < path.length; i++) {                    
+                    instance.push(path[i]);
                 }
             }
 
@@ -1003,23 +994,21 @@
             this.length--;
         }
         Path.prototype.toString = function () {
-            var str = this.join(gediConstructor.pathSeparator);
-            return rawToPath(str);
+            return rawToPath(this.join(gediConstructor.pathSeparator));
         };
         Path.prototype.toRawString = function () {
             return this.join(gediConstructor.pathSeparator);
         };
-        Path.prototype.slice = function () {
+        Path.prototype.slice = function () {            
             return new Path(Array.prototype.slice.apply(this, arguments));
         };
         Path.prototype.splice = function () {
             return new Path(Array.prototype.splice.apply(this, arguments));
         };
         Path.prototype.append = function () {
-            var args = Array.prototype.slice.call(arguments),
-                result = this.slice();
+            var result = this.slice();
 
-            fastEach(args, function(arg){
+            fastEach(arguments, function(arg){
                 fastEach(Path.parse(arg), function(argPart){
                     result.push(argPart);
                 });
@@ -1055,25 +1044,25 @@
         //
         //***********************************************
 
-        function Expression(expression) {
-            var self = this,
+        function Expression(input) {
+            var expression = this,
                 absolute = false;
 
             //Passed an Expression? pass it back.
-            if (expression instanceof Expression) {
-                return expression;
+            if (input instanceof Expression) {
+                return input;
             }
             
-            self.original = expression;
+            expression.original = input;
 
-            if (typeof expression === "string") {
+            if (typeof input === "string") {
                 //passed a string or array? make a new Expression.
-                var tokens = gel.tokenise(expression);
+                var tokens = gel.tokenise(input);
                 fastEach(tokens, function (key) {
-                    self.push(key);
+                    expression.push(key);
                 });
             }
-            self.paths = getPathsInExpression(self);
+            expression.paths = getPathsInExpression(expression);
         }
         Expression.prototype = inheritFromArray();
         Expression.prototype.toString = function () {
@@ -1082,10 +1071,10 @@
         Expression.prototype.toJSON = function(){
             return this.toString();
         };
-        Expression.parse = function (expression) {
-            expression instanceof Path && (expression = expression.toString());
+        Expression.parse = function (input) {
+            input instanceof Path && (input = input.toString());
 
-            return expression instanceof this && expression || new Expression(expression);
+            return input instanceof Expression && input || new Expression(input);
         };
 
         function Gedi() {
