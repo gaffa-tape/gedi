@@ -613,11 +613,13 @@
                 }
             }
 
+            var escapedPath = new Path(bindingPathParts);
+
             if(!callback){
-                set(bindingPathParts, [], internalBindings);
+                set(escapedPath, [], internalBindings);
             }
             
-            callbacks = get(bindingPathParts, internalBindings);            
+            callbacks = get(escapedPath, internalBindings);            
 
             if(!callbacks){
                 return;
