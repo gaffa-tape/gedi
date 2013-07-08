@@ -369,6 +369,8 @@
                     reference = reference[key];
                 }
             }
+
+            return reference;
         }
 
         
@@ -795,7 +797,14 @@
             path = resolvePath(parentPath, path);            
             
             setDirtyState(path, dirty);
-            remove(path, model);
+
+            var reference = remove(path, model);
+
+            if(Array.isArray(reference)){
+                //trigger one above
+                path = resolvePath('[/]', path.append('..'));
+            }
+
             trigger(path);
         }
 
