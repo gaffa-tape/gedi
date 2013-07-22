@@ -1130,9 +1130,7 @@
 
             isDirty: isDirty,
 
-            setDirtyState: function (path, dirty) {
-                return setDirtyState(path, dirty);
-            },
+            setDirtyState: setDirtyState,
             
             gel: gel // expose gel instance for extension
         };
