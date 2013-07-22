@@ -814,16 +814,19 @@
         //
         //***********************************************  
 
-        function setDirtyState(path, dirty) {
+        function setDirtyState(path, dirty, parentPath) {
+
             var reference = dirtyModel;
             
             if(!Path.mightParse(path)){
                 throw exceptions.invalidPath;
             }
 
-            dirty = dirty !== false;
+            parentPath = parentPath || new Path();
+            
+            path = resolvePath(parentPath, path);
 
-            path = Path.parse(path);
+            dirty = dirty !== false;
 
             if(path.isRoot()){                
                 dirtyModel = {
