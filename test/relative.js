@@ -63,6 +63,37 @@ test('up a level get', function(t) {
     );
 });
 
+test('up named levels get', function(t) {
+    var gedi = new Gedi({thing:{stuff:{majigger:{foo:{bar:{pants:'pants'}}}}, whatsits:'things'}});
+
+    t.plan(1);
+    t.equal(
+        gedi.get('[..thing/whatsits]', '[thing/stuff/majigger/foo/bar/pants]'),
+        'things',
+        'can get [..thing/whatsits] from path [thing/stuff/majigger/foo/bar/pants]'
+    );
+});
+
+test('get indexed item', function(t) {
+    var gedi = new Gedi({
+            things:[
+                {
+                    stuff:{
+                        majigger:'stuff'
+                    },
+                    whatsits:'whatsits'
+                }
+            ]
+        });
+
+    t.plan(1);
+    t.equal(
+        gedi.get('[..things/#/whatsits]', '[things/0/stuff/majigger]'),
+        'whatsits',
+        'can get [..things/#/whatsits] from path [things/0/stuff/majigger]'
+    );
+});
+
 test('up a level set', function(t) {
     var gedi = new Gedi();
 
@@ -73,6 +104,19 @@ test('up a level set', function(t) {
         gedi.get('[/thing/whatsit]'),
         'whatsit',
         'successfully set [../whatsit] from [thing/stuff]'
+    );
+});
+
+test('up named levels get', function(t) {
+    var gedi = new Gedi();
+
+    t.plan(1);
+
+    gedi.set('[..thing/whatsit]', 'whatsit', '[thing/stuff/majigger/foo/bar/pants]');
+    t.equal(
+        gedi.get('[/thing/whatsit]'),
+        'whatsit',
+        'can set [..thing/whatsit] from path [thing/stuff/majigger/foo/bar/pants]'
     );
 });
 

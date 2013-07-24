@@ -23,10 +23,11 @@
     //"constants"
     gediConstructor.pathSeparator = "/";
     gediConstructor.upALevel = "..";
+    gediConstructor.currentKey = "#";
     gediConstructor.rootPath = "";
     gediConstructor.pathStart = "[";
     gediConstructor.pathEnd = "]";
-    gediConstructor.pathWildcard = "*";
+    gediConstructor.pathWildcard = "*";    
 
     var exceptions = {
         invalidPath: 'Invalid path syntax',
@@ -687,7 +688,8 @@
         //***********************************************
 
         function resolvePath() {
-            var absoluteParts = [];
+            var absoluteParts = [],
+                lastRemoved;
 
             for(var i = 0; i < arguments.length; i++){
                 var path = arguments[i];
@@ -701,9 +703,21 @@
 
                     if(path.length === 0){
                         // Empty path, maintain parent path.
-                    } else if (pathPart === gediConstructor.upALevel) {
+                    } else if (pathPart === gediConstructor.currentKey) {
+                        // Has a last removed? Add it back on.
+                        if(lastRemoved != null){
+                            absoluteParts.push(lastRemoved);
+                            lastRemoved = null;
+                        }
+                    } else if (pathPart.length === 2 && pathPart === gediConstructor.upALevel) {
                         // Up a level? Remove the last item in absoluteParts
-                        absoluteParts.pop();
+                        lastRemoved = absoluteParts.pop();
+                    } else if (pathPart.slice(0,2) === gediConstructor.upALevel) {
+                        var argument = pathPart.slice(2);
+                        //named
+                        while(absoluteParts.slice(-1).pop() !== argument){
+                            lastRemoved = absoluteParts.pop();
+                        }
 
                     } else if (pathPart === gediConstructor.rootPath) {
                         // Root path? Do nothing
