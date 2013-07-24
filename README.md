@@ -55,6 +55,18 @@ This object makes working with paths easier:
     var resolvedPath = new Path().append('[/hello]', '[things]', '[..stuff]', '[majigger]');
     
     // resolvedPath will be [hello/majigger]
+
+You can go up levels to a specific key in a path:
+
+    var resolvedPath = new Path('[/users/5/docs/4/title]').append('[..docs]');
+    
+    // resolvedPath will be [/users/5/docs]
+
+You can go to the last removed key after going up a level:
+
+    var resolvedPath = new Path('[/users/5/docs/4/title]').append('[..users/#/id]');
+    
+    // resolvedPath will be [/users/5/id]
     
 ### Expressions (Only if Gel is available) ###
 
