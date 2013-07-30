@@ -115,3 +115,45 @@ test('debind relative expressions by callback', function(t) {
     gedi.set('[thing/b]', 'stuff');
     gedi.set('[thing/c]', 'stuff');
 });
+
+test('debind relative named all', function(t) {
+    var model = {
+            things: {
+                stuff: {
+                    majigger: "majigger"
+                },
+                whatsits: "whatsits"
+            }
+        },
+        gedi = new Gedi(model);
+    
+    t.plan(1);
+    gedi.bind('[..things/whatsits]', function() {
+        t.pass('captured change of [..things/whatsits]');
+    },'[things/stuff/majigger]');
+    
+    gedi.set('[things/whatsits]', 'stuff');
+    gedi.debind();
+    gedi.set('[things/whatsits]', 'majigger');
+});
+
+test('debind relative named keyed all', function(t) {
+    var model = {
+            things: [{
+                stuff: {
+                    majigger: "majigger"
+                },
+                whatsits: "whatsits"
+            }]
+        },
+        gedi = new Gedi(model);
+    
+    t.plan(1);
+    gedi.bind('[..things/#/whatsits]', function() {
+        t.pass('captured change of [..things/#/whatsits]');
+    },'[things/0/stuff/majigger]');
+    
+    gedi.set('[things/0/whatsits]', 'stuff');
+    gedi.debind();
+    gedi.set('[things/0/whatsits]', 'majigger');
+});

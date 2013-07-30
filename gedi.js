@@ -423,8 +423,8 @@
 
                         callback({
                             target: target, 
-                            getValue: function(scope){
-                                return modelGet(callbackBinding, parentPath, scope);
+                            getValue: function(scope, returnAsTokens){
+                                return modelGet(callbackBinding, parentPath, scope, returnAsTokens);
                             }
                         });
                     }
@@ -741,7 +741,7 @@
         //
         //***********************************************
 
-        function modelGet(binding, parentPath, scope) {
+        function modelGet(binding, parentPath, scope, returnAsTokens) {
             if(parentPath && !(typeof parentPath === "string" || parentPath instanceof Path)){
                 scope = parentPath;
                 parentPath = new Path();
@@ -759,7 +759,7 @@
                     expression = binding.toString();
                 }
 
-                return gel.evaluate(expression, scope);
+                return gel.evaluate(expression, scope, returnAsTokens);
             }
             
             parentPath = parentPath || new Path();
@@ -1146,7 +1146,21 @@
 
             setDirtyState: setDirtyState,
             
-            gel: gel // expose gel instance for extension
+            gel: gel, // expose gel instance for extension
+
+            getNumberOfBindings: function(){
+                function getNumCallbacks(reference){
+                    var length = reference.length;
+                    for (var key in reference) {
+                        if(isNaN(key)){
+                            length += getNumCallbacks(reference[key]);
+                        }
+                    }
+                    return length;
+                }
+
+                return getNumCallbacks(internalBindings);
+            }
         };
 
         return new Gedi();
