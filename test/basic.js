@@ -32,20 +32,13 @@ test('nested gets', function(t) {
 test('basic set', function(t) {
     var gedi = new Gedi();
 
-    t.plan(2);
+    t.plan(1);
 
     gedi.set('[thing]', 'stuff');
     t.equal(
         gedi.get('[thing]'),
         'stuff',
         'successfully set [thing]'
-    );
-
-    gedi.set(new gedi.Path('[thing]'), false);
-    t.equal(
-        gedi.get('[thing]'),
-        false,
-        'successfully set [thing] via path'
     );
 });
 
