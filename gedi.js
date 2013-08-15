@@ -178,7 +178,7 @@
 
             for (var key in source) {
                 if (source.hasOwnProperty(key)) {
-                    itemPath = resolvePath(path, key);
+                    itemPath = resolvePath(path, createPath(key));
                     if (result instanceof Array) {
                         isDirty(itemPath) && result.push(source[key]);
                     } else {
@@ -1033,7 +1033,10 @@
         Gedi.prototype = {
             paths: {
                 create: createPath,
-                resolve: resolvePath
+                resolve: resolvePath,
+                isRoot: isPathRoot,
+                isAbsolute: isPathAbsolute,
+                append: appendPath
             },
 
             get: modelGet,

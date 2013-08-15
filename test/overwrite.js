@@ -12,6 +12,7 @@ test('set root (overwrite model)', function(t) {
         'stuff',
         'retrieved [things] ok'
     );
+    t.end();
 });
 
 test('get root (return model)', function(t) {
@@ -23,6 +24,7 @@ test('get root (return model)', function(t) {
         'stuff',
         'root model retrieval ok'
     );
+    t.end();
 });
 
 test('overwrite dirty state', function(t) {
@@ -32,6 +34,7 @@ test('overwrite dirty state', function(t) {
 
     t.plan(1);
     t.ok(gedi.isDirty(), 'model dirty - as expected');
+    t.end();
 });
 
 test('overwrite but flag not dirty', function(t) {
@@ -45,4 +48,5 @@ test('overwrite but flag not dirty', function(t) {
         false,
         'model not dirty'
     );
+    t.end();
 });

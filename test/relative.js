@@ -10,6 +10,7 @@ test('relative get', function(t) {
         'stuff',
         'get [majigger] from using path [thing/stuff] ok'
     );
+    t.end();
 });
 
 test('relative get root', function(t) {
@@ -22,6 +23,7 @@ test('relative get root', function(t) {
         model,
         'get [/] from path [thing/stuff] matches expected'
     );
+    t.end();
 });
 
 test('relative set', function(t) {
@@ -36,6 +38,7 @@ test('relative set', function(t) {
         'whatsit',
         'successfully set [majigger] from with path [thing/stuff]'
     );
+    t.end();
 });
 
 test('relative set root', function(t) {
@@ -50,6 +53,7 @@ test('relative set root', function(t) {
         model.thing,
         'successfully set [/] from path [thing/stuff]'
     );
+    t.end();
 });
 
 test('up a level get', function(t) {
@@ -61,6 +65,7 @@ test('up a level get', function(t) {
         'things',
         'can get [../whatsits] from path [thing/stuff]'
     );
+    t.end();
 });
 
 test('up named levels get', function(t) {
@@ -72,6 +77,7 @@ test('up named levels get', function(t) {
         'things',
         'can get [..thing/whatsits] from path [thing/stuff/majigger/foo/bar/pants]'
     );
+    t.end();
 });
 
 test('get indexed item', function(t) {
@@ -92,6 +98,7 @@ test('get indexed item', function(t) {
         'whatsits',
         'can get [..things/#/whatsits] from path [things/0/stuff/majigger]'
     );
+    t.end();
 });
 
 test('up a level set', function(t) {
@@ -105,6 +112,7 @@ test('up a level set', function(t) {
         'whatsit',
         'successfully set [../whatsit] from [thing/stuff]'
     );
+    t.end();
 });
 
 test('up named levels get', function(t) {
@@ -129,6 +137,7 @@ test('root get', function(t) {
         'hello',
         'successfully got value for [/thing/whatsits] using the path [thing/stuff]'
     );
+    t.end();
 });
 
 test('root set', function(t) {
@@ -144,6 +153,7 @@ test('root set', function(t) {
         'hello',
         'successfully set [/thing/whatsits] from path [thing/stuff/majigger]'
     );
+    t.end();
 });
 
 test('same path get', function(t) {
@@ -155,6 +165,7 @@ test('same path get', function(t) {
         'stuff',
         'successfully got value for [] from path [thing/stuff/majigger]'
     );
+    t.end();
 });
 
 test('same path set', function(t) {
@@ -168,4 +179,5 @@ test('same path set', function(t) {
         'stuff',
         'successfully set value for [] from path [thing/stuff/majigger]'
     );
+    t.end();
 });
