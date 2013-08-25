@@ -736,6 +736,9 @@
                         var argument = pathPart.slice(2);
                         //named
                         while(absoluteParts.slice(-1).pop() !== argument){
+                            if(absoluteParts.length === 0){
+                                throw "Named path part was not found: '" + pathPart + "', in path: '" + path + "'.";
+                            }
                             lastRemoved = absoluteParts.pop();
                         }
                     } else {
