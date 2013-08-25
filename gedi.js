@@ -383,7 +383,7 @@ function newGedi(model) {
                         wildcardIndex = callbackBinding.indexOf(gediConstructor.pathWildcard),
                         wildcardMatchFail;
 
-                    if(wildcardIndex >= 0 && getPathsInExpression(callbackBinding)[0].toString() === callbackBinding.toString()){
+                    if(wildcardIndex >= 0 && getPathsInExpression(callbackBinding)[0] === callbackBinding){
 
                         //fully resolve the callback path
                         callbackBindingParts = pathToParts(resolvePath('[/]', callback.parentPath, callbackBinding));
@@ -576,7 +576,7 @@ function newGedi(model) {
                 fastEach(callback.references, function(path){                        
                     removeBinding(path, callback);
                 });
-            }else{                    
+            }else{
                 internalBindings = [];
             }
             return;
@@ -639,7 +639,7 @@ function newGedi(model) {
             var tokens = gel.tokenise(expression);
             for(var index = 0; index < tokens.length; index++){
             var token = tokens[index];
-                if(token.name === 'gediPathToken'){
+                if(token instanceof PathToken){
                     paths.push(token.original);
                 }
             }
@@ -1012,7 +1012,7 @@ function newGedi(model) {
 
     function isPathRoot(path){
         var parts = pathToParts(path);
-        return (parts.length === 1 && isPathAbsolute(parts)) || parts.length === 0;
+        return (isPathAbsolute(parts) && parts[0] === parts[1]) || parts.length === 0;
     }
 
     function Gedi() {

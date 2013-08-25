@@ -115,7 +115,7 @@ test('up a level set', function(t) {
     t.end();
 });
 
-test('up named levels get', function(t) {
+test('up named levels set', function(t) {
     var gedi = new Gedi();
 
     t.plan(1);
