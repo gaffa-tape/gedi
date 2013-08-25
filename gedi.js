@@ -93,10 +93,6 @@ function newGedi(model) {
         }
         return array;
     }
-    
-    function pathTokenCallback(value, scopedVariables) {
-        return get(resolvePath(scopedVariables._gediModelContext_, value), model);
-    }
 
 
     //***********************************************
@@ -499,12 +495,12 @@ function newGedi(model) {
         }
 
         path = binding;
+
+        callback.references.push(path);
                     
         if (parentPath) {
             path = resolvePath(createRootPath(), parentPath, path);
         }
-
-        callback.references.push(path);
 
         // Handle wildcards
 
@@ -711,7 +707,7 @@ function newGedi(model) {
                         lastRemoved = null;
                     }
                 } else if (pathPart === gediConstructor.rootPath) {
-                    // Root path? Do nothing
+                    // Root path? Reset parts to be absolute.
                     absoluteParts = [''];
 
                 } else if (pathPart === gediConstructor.upALevel) {
@@ -939,12 +935,12 @@ function newGedi(model) {
                 }
                 parts.push(pathPart);
             }
-            return rawToPath(path.join(gediConstructor.pathSeparator));
+            return rawToPath(parts.join(gediConstructor.pathSeparator));
         }
     }
 
     function createRootPath(){
-        return createPath([gediConstructor.rootPath]);
+        return createPath([gediConstructor.rootPath, gediConstructor.rootPath]);
     }
 
     function pathToParts(path){
@@ -980,15 +976,14 @@ function newGedi(model) {
                 nextChar = path.charAt(i+1);
                 if(nextChar === '\\'){
                     path = path.slice(0, i) + path.slice(i + 1);
-                    i++;
                 }else if(nextChar === ']' || nextChar === '['){
                     path = path.slice(0, i) + path.slice(i + 1);
                 }else if(nextChar === gediConstructor.pathSeparator){
-                    i++;
+                    parts.push(path.slice(lastPartIndex), i);
                 }
             }
         }
-        parts.push(path.slice(lastPartIndex));
+        parts.push(path.slice(lastPartIndex));        
 
         return parts;
     }
