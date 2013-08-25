@@ -12,6 +12,7 @@ test('basic bind', function(t) {
     });
 
     gedi.set('[thing]', 'stuff');   
+    t.end();
 });
 
 test('array bind', function(t) {
@@ -25,6 +26,7 @@ test('array bind', function(t) {
     });
 
     gedi.set('[things/0]', 'stuff');
+    t.end();
 });
 
 test('nested bind', function(t) {
@@ -38,6 +40,7 @@ test('nested bind', function(t) {
     });
 
     gedi.set('[thing/stuff/majigger]', 'stuff');
+    t.end();
 });
 
 test('pre-allocated bind', function(t) {
@@ -50,6 +53,7 @@ test('pre-allocated bind', function(t) {
     });
 
     gedi.set('[thing/stuff/majigger]', 'stuff');
+    t.end();
 });
 
 test('remove bind', function(t) {
@@ -63,6 +67,7 @@ test('remove bind', function(t) {
     });
 
     gedi.remove('[thing]');
+    t.end();
 });
 
 test('scoped bind', function(t) {
@@ -86,6 +91,7 @@ test('scoped bind', function(t) {
     });
     
     gedi.set('[thing/3]',4);
+    t.end();
 });
 
 test('remove scoped bind', function(t) {
@@ -109,4 +115,5 @@ test('remove scoped bind', function(t) {
     });
     
     gedi.remove('[a]');
+    t.end();
 });

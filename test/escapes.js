@@ -13,6 +13,7 @@ test('escaped braces', function(t) {
         'things',
         'ok'
     );
+    t.end();
 });
 
 test('escaped braces resolution', function(t) {
@@ -28,6 +29,7 @@ test('escaped braces resolution', function(t) {
         'things',
         'ok'
     );
+    t.end();
 });
 
 // http://knowyourmeme.com/memes/xzibit-yo-dawg
@@ -39,6 +41,7 @@ test('escaped escapes', function(t) {
 
     t.plan(1);
     t.equal(gedi.get('[\\\\]'), 'things', 'ok');
+    t.end();
 });
 
 test('escaped escapes resolution', function(t) {
@@ -50,6 +53,7 @@ test('escaped escapes resolution', function(t) {
 
     t.plan(1);
     t.equal(gedi.get('[\\\\]', '[\\\\]'), 'things', 'ok');
+    t.end();
 });
 
 test('escaped braces and escaped escapes', function(t) {
@@ -60,4 +64,5 @@ test('escaped braces and escaped escapes', function(t) {
 
     t.plan(1);
     t.equal(gedi.get('[\\\\[\\]\\\\]'), 'things', 'ok');
+    t.end();
 });

@@ -23,4 +23,5 @@ test('expression path resolving', function(t) {
         3,
         '[/stuff/things] contains 3 items'
     );
+    t.end();
 });

@@ -1,44 +1,40 @@
 var Gedi = require('../'),
     test = require('tape');
 
-test('empty path', function(t) {
-    var gedi = new Gedi(),
-        path = new gedi.Path();
-
-    t.plan(1);
-    t.equal(path.length, 0, 'empty path has zero length');
-});
-
 test('root path', function(t) {
     var gedi = new Gedi(),
-        path = new gedi.Path('[/]');
+        path = '[/]';
 
     t.plan(1);
-    t.ok(path.length === 1 && path.isRoot(), 'path is root');
+    t.ok(gedi.paths.isRoot(path), 'path is root');
+    t.end();
 });
 
 test('absolute path', function(t) {
     var gedi = new Gedi(),
-        path = new gedi.Path('[/majigger]');
+        path = '[/majigger]';
 
     t.plan(1);
-    t.ok(path.length === 2 && path.isAbsolute(), 'path is absolute');
+    t.ok(gedi.paths.isAbsolute(path), 'path is absolute');
+    t.end();
 });
 
 test('relative path', function(t) {
     var gedi = new Gedi(),
-        path = new gedi.Path('[majigger]');
+        path = '[majigger]';
 
     t.plan(1);
-    t.notOk(path.length === 1 && path.isAbsolute(), 'path is not absolute');
+    t.notOk(gedi.paths.isAbsolute(path), 'path is not absolute');
+    t.end();
 });
 
 test('append path', function(t) {
     var gedi = new Gedi(),
-        path = new gedi.Path('[majigger]');
+        path = '[majigger]';
 
-    path = path.append('[../stuff]')
+    path = gedi.paths.append(path ,'[../stuff]');
 
     t.plan(1);
-    t.equal(path.toString(), '[majigger/../stuff]', 'path append works');
+    t.equal(path, '[majigger/../stuff]', 'path append works');
+    t.end();
 });
