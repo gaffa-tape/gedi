@@ -5,7 +5,7 @@
     "tags": [
         "DOM"
     ],
-    "version": "0.5.0",
+    "version": "0.5.1",
     "main": "gedi.js",
     "dependencies": {
         "gel-js":"0.4.0",

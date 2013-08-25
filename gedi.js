@@ -810,7 +810,7 @@ function newGedi(model) {
 
         if(Array.isArray(reference)){
             //trigger one above
-            path = resolvePath('[/]', path.append('..'));
+            path = resolvePath('[/]', appendPath(path, createPath(gediConstructor.upALevel)));
         }
 
         trigger(path);
