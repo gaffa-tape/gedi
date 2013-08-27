@@ -903,6 +903,10 @@ function newGedi(model) {
 
     function createPath(path){
 
+        if(typeof path === 'number'){
+            path = path.toString();
+        }
+
         if(path == null){
             return rawToPath();
         }
