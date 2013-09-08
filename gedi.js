@@ -140,6 +140,7 @@ function newGedi(model) {
     PathToken.prototype.evaluate = function(scope){
         this.result = get(resolvePath(scope.get('_gediModelContext_'), this.original), model);
     };
+    gediConstructor.PathToken = PathToken;
     gel.tokenConverters.push(PathToken);
 
     gel.scope.isDirty = function(scope, args){
@@ -173,6 +174,57 @@ function newGedi(model) {
         }
 
         return result;
+    };
+
+
+    function createKeytracker(fn){
+        return function(scope, args){
+            if(scope.get('__trackKeys__')){
+                var firstArgToken = args.getRaw(0);
+
+                if(firstArgToken instanceof Token){
+                    if(firstArgToken instanceof PathToken){
+                        args.callee.path = firstArgToken.original;
+                    }else{
+                        args.callee.path = firstArgToken.path;
+                    }
+                }
+            }
+
+            // Set every time, the last one will be the.. last one..
+            scope.set('_sourcePath', args.callee.path);
+
+            return fn(scope, args);
+        };
+    }
+
+    var originalFilter = gel.scope.filter;
+    gel.scope.filter = createKeytracker(originalFilter);
+    
+    var originalSlice = gel.scope.slice;
+    gel.scope.slice = createKeytracker(originalSlice);
+
+    var originalSort = gel.scope.sort;
+    gel.scope.sort = createKeytracker(originalSort);
+
+    var tokenConverters = (function(){
+            var result = {},
+                converterList = gel.tokenConverters;
+
+            for(var i = 0; i < converterList.length; i++){
+                result[converterList[i].name] = converterList[i];
+            }
+
+            return result;
+        }());
+
+    var originalPeriodEvaluate = tokenConverters.PeriodToken.prototype.evaluate;
+    tokenConverters.PeriodToken.prototype.evaluate = function(scope){
+        var targetPath = this.targetToken instanceof PathToken ? this.targetToken.original : this.targetToken.path;
+        if(targetPath){
+            this.path = appendPath(targetPath, createPath(this.identifierToken.original));
+        }
+        originalPeriodEvaluate.call(this, scope);
     };
 
     //***********************************************
@@ -1014,9 +1066,7 @@ function newGedi(model) {
         return (isPathAbsolute(parts) && parts[0] === parts[1]) || parts.length === 0;
     }
 
-    function Gedi() {
-        
-    }
+    function Gedi() {}
 
     Gedi.prototype = {
         paths: {
