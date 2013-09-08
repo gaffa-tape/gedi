@@ -138,6 +138,7 @@ function newGedi(model) {
     PathToken.prototype.precedence = 4;
     PathToken.tokenise = detectPathToken;
     PathToken.prototype.evaluate = function(scope){
+        this.path = this.original;
         this.result = get(resolvePath(scope.get('_gediModelContext_'), this.original), model);
     };
     gediConstructor.PathToken = PathToken;
@@ -176,23 +177,33 @@ function newGedi(model) {
         return result;
     };
 
-
-    function createKeytracker(fn){
+    function createKeypasser(fn){
         return function(scope, args){
-            if(scope.get('__trackKeys__')){
-                var firstArgToken = args.getRaw(0);
+            var firstArgToken = args.getRaw(0);
 
-                if(firstArgToken instanceof Token){
-                    if(firstArgToken instanceof PathToken){
-                        args.callee.path = firstArgToken.original;
-                    }else{
-                        args.callee.path = firstArgToken.path;
-                    }
+            if(firstArgToken instanceof Gel.Token){
+                if(firstArgToken instanceof PathToken){
+                    args.callee.path = firstArgToken.original;
+                }else{
+                    args.callee.path = firstArgToken.path;
                 }
             }
 
-            // Set every time, the last one will be the.. last one..
-            scope.set('_sourcePath', args.callee.path);
+            return fn(scope, args);
+        };
+    }
+
+    function createKeytracker(fn){
+        return function(scope, args){
+            var firstArgToken = args.getRaw(0);
+
+            if(firstArgToken instanceof Gel.Token){
+                if(firstArgToken instanceof PathToken){
+                    args.callee.path = firstArgToken.original;
+                }else{
+                    args.callee.path = firstArgToken.path;
+                }
+            }
 
             return fn(scope, args);
         };
@@ -1074,7 +1085,8 @@ function newGedi(model) {
             resolve: resolvePath,
             isRoot: isPathRoot,
             isAbsolute: isPathAbsolute,
-            append: appendPath
+            append: appendPath,
+            toParts: pathToParts
         },
 
         get: modelGet,
