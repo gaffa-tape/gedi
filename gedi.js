@@ -140,6 +140,9 @@ function newGedi(model) {
     PathToken.prototype.evaluate = function(scope){
         this.path = this.original;
         this.result = get(resolvePath(scope.get('_gediModelContext_'), this.original), model);
+        this.sourcePathInfo = {
+            path: this.original
+        };
     };
     gediConstructor.PathToken = PathToken;
     gel.tokenConverters.push(PathToken);
@@ -316,6 +319,7 @@ function newGedi(model) {
         }else if(this.targetToken.sourcePathInfo){
             targetPath = this.targetToken.sourcePathInfo.path
         }
+
 
         if(targetPath){
             this.sourcePathInfo = {
@@ -919,23 +923,37 @@ function newGedi(model) {
     //
     //***********************************************
 
-    function modelSet(path, value, parentPath, dirty) {
-        if(typeof path === 'object' && !createPath(path)){
+    function modelSet(expression, value, parentPath, dirty) {
+        if(typeof expression === 'object' && !createPath(expression)){
             dirty = value;
-            value = path;
-            path = createRootPath();
+            value = expression;
+            expression = createRootPath();
         }else if(typeof parentPath === 'boolean'){
             dirty = parentPath;
             parentPath = undefined;
         }
 
-        parentPath = parentPath || createPath();
+        if(expression && gel){
+            var gelResult,
+                scope = {
+                    _gediModelContext_: parentPath
+                };
 
-        path = resolvePath(parentPath, path);
+            var resultToken = gel.evaluate(expression, scope, true)[0],
+                sourcePathInfo = resultToken.sourcePathInfo;
 
-        setDirtyState(path, dirty);
-        set(path, value, model);
-        trigger(path);
+            if(sourcePathInfo){
+                expression = sourcePathInfo.path;
+            }else{
+                parentPath = parentPath || createPath();
+
+                expression = resolvePath(parentPath, expression);
+            }
+        }
+
+        setDirtyState(expression, dirty);
+        set(expression, value, model);
+        trigger(expression);
     }
 
     //***********************************************
