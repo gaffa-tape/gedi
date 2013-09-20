@@ -229,8 +229,66 @@ function newGedi(model) {
         };
     }
 
+    function createResultPathsObject(token, source){
+        var innerPathInfo = token.sourcePathInfo,
+            originPath = '[]',
+            resultPaths = source && typeof source === 'object' && new source.constructor();
+
+        if(!resultPaths){
+            return;
+        }
+
+        if(token instanceof Gel.Token){
+            if(token instanceof PathToken){
+                originPath = token.original;
+                resultPaths.original = token.result;
+            }
+        }
+        resultPaths.original = innerPathInfo && innerPathInfo.original || token.result;
+        resultPaths.path = innerPathInfo && innerPathInfo.path || originPath;
+
+        return resultPaths;
+    }
+
     var originalFilter = gel.scope.filter;
-    gel.scope.filter = createKeytracker(originalFilter);
+    gel.scope.filter = function(scope, args) {
+        var firstArgToken = args.getRaw(0),
+            source = args.get(0),
+            resultPaths = createResultPathsObject(firstArgToken, source),
+            innerPathInfo = firstArgToken.sourcePathInfo,
+            filteredList = source && typeof source === 'object' && new source.constructor();
+
+        var functionToCompare = args.get(1);
+
+        if(!filteredList){
+            return undefined;
+        }
+
+        var isArray = Array.isArray(source),
+            item;
+
+        for(var key in source){
+            if(isArray && isNaN(key)){
+                continue;
+            }
+            item = source[key];
+            if(typeof functionToCompare === "function"){
+                if(scope.callWith(functionToCompare, [item])){
+                    filteredList.push(item);
+                    resultPaths && (resultPaths[key] = innerPathInfo && innerPathInfo[key] || appendPath(resultPaths.path, createPath(key)));
+                }
+            }else{
+                if(item === functionToCompare){
+                    filteredList.push(item);
+                    resultPaths && (resultPaths[key] = innerPathInfo && innerPathInfo[key] || appendPath(resultPaths.path, createPath(key)));
+                }
+            }
+        }
+
+        args.callee.sourcePathInfo = resultPaths;
+
+        return filteredList;
+    };
 
     var originalSlice = gel.scope.slice;
     gel.scope.slice = createKeytracker(originalSlice);
@@ -251,14 +309,19 @@ function newGedi(model) {
 
     var originalPeriodEvaluate = tokenConverters.PeriodToken.prototype.evaluate;
     tokenConverters.PeriodToken.prototype.evaluate = function(scope){
-        var targetPath = this.targetToken instanceof PathToken ? this.targetToken.original : this.targetToken.path,
-            resultPath = {
-                path: targetPath
-            };
-        if(targetPath){
-            resultPath[this.identifierToken.original] = appendPath(targetPath, createPath(this.identifierToken.original));
+        var targetPath;
+
+        if(this.targetToken instanceof PathToken){
+            targetPath = this.targetToken.original
+        }else if(this.targetToken.sourcePathInfo){
+            targetPath = this.targetToken.sourcePathInfo.path
         }
-        this.sourcePathInfo = resultPath;
+
+        if(targetPath){
+            this.sourcePathInfo = {
+                path: appendPath(targetPath, createPath(this.identifierToken.original))
+            };
+        }
         originalPeriodEvaluate.call(this, scope);
     };
 
