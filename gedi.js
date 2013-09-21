@@ -357,6 +357,22 @@ function newGedi(model) {
     var originalSort = gel.scope.sort;
     gel.scope.sort = createKeytracker(originalSort);
 
+    gel.scope['?'] = function(scope, args){
+        var result,
+            resultToken;
+        if(args.next()){
+            result = args.get(1);
+            resultToken = args.getRaw(1);
+        }else{
+            result = args.get(2);
+            resultToken = args.getRaw(2);
+        }
+
+        args.callee.sourcePathInfo = resultToken && resultToken.sourcePathInfo;
+
+        return result;
+    };
+
     gel.scope.last = function(scope, args){
         var sourceToken = args.getRaw(0),
             source = args.get(0),
