@@ -74,6 +74,22 @@ test('expression multiple path setting', function(t) {
     t.end();
 });
 
+test('expression multiple path setting relative', function(t) {
+    var gedi = new Gedi({things: {stuff:[1,2,3,4,5]}});
+
+    gedi.set('(filter [stuff] {thing (> thing 2)})', 'wat', '[things]');
+
+    t.plan(1);
+
+    t.deepEqual(
+        gedi.get('[things/stuff]'),
+        [1,2,'wat','wat','wat'],
+        'set via filter'
+    );
+
+    t.end();
+});
+
 test('complex expression setting', function(t) {
     var gedi = new Gedi({stuff:[1,2,3,4,5]});
 
@@ -101,6 +117,22 @@ test('complex expression setting 2', function(t) {
         gedi.get('[stuff]'),
         [1,2,3,4,'wat'],
         'set via last'
+    );
+
+    t.end();
+});
+
+test('complex expression setting 3', function(t) {
+    var gedi = new Gedi({stuff:'things'});
+
+    gedi.set('({stuff stuff} [stuff])', 'wat');
+
+    t.plan(1);
+
+    t.deepEqual(
+        gedi.get('[stuff]'),
+        'wat',
+        'set via anon function'
     );
 
     t.end();

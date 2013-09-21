@@ -400,6 +400,36 @@ function newGedi(model) {
         }
     };
 
+    tokenConverters.FunctionToken.prototype.evaluate = function(scope){
+        var parameterNames = this.childTokens.slice(),
+        fnBody = parameterNames.pop();
+
+        this.result = function(scope, args){
+            scope = new scope.constructor(scope);
+
+            for(var i = 0; i < parameterNames.length; i++){
+                var parameterToken = args.getRaw(i);
+                scope.set(parameterNames[i].original, args.get(i));
+                if(parameterToken instanceof Gel.Token && parameterToken.sourcePathInfo){
+                    scope.set('__sourcePathInfoFor__' + parameterNames[i].original, parameterToken.sourcePathInfo);
+                }
+            }
+
+            fnBody.evaluate(scope);
+
+            if(args.callee){
+                args.callee.sourcePathInfo = fnBody.sourcePathInfo;
+            }
+
+            return fnBody.result;
+        }
+    };
+
+    tokenConverters.IdentifierToken.prototype.evaluate = function(scope){
+        this.result = scope.get(this.original);
+        this.sourcePathInfo = scope.get('__sourcePathInfoFor__' + this.original);
+    };
+
     //***********************************************
     //
     //      Get
