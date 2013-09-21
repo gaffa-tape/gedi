@@ -94,6 +94,25 @@ function newGedi(model) {
         return array;
     }
 
+    //***********************************************
+    //
+    //      Array Fast Each
+    //
+    //***********************************************
+
+    function each(object, callback) {
+        var isArray = Array.isArray(object);
+        for (var key in object) {
+            if(isArray && isNaN(key)){
+                continue;
+            }
+            if(callback(object[key], key, object)){
+                break;
+            }
+        }
+        return object;
+    }
+
 
     //***********************************************
     //
@@ -181,83 +200,85 @@ function newGedi(model) {
     };
 
     function findValueIn(value, source){
-        var isArray = Array.isArray(source);
-        for(var key in source){
-            if(isArray && isNaN(key)){
-                continue;
+        var result;
+        each(source, function(item, key){
+            if(item === value){
+                result = key;
+                return true;
             }
-            if(source[key] === value){
-                return key;
-            }
-        }
+        });
+        return result;
     }
 
-    function createKeytracker(fn){
-        return function(scope, args){
-            var firstArgToken = args.getRaw(0),
-                firstArg = args.get(0),
-                originPath = '[]',
-                innerPathInfo = firstArgToken.sourcePathInfo,
-                resultPaths = firstArg && typeof firstArg === 'object' && new firstArg.constructor();
-
-            if(!firstArg){
-                return;
-            }
-
-            if(firstArgToken instanceof Gel.Token){
-                if(firstArgToken instanceof PathToken){
-                    originPath = firstArgToken.original;
-                    resultPaths.original = firstArgToken.result;
-                }
-            }
-
-            resultPaths.original = innerPathInfo && innerPathInfo.original || firstArg;
-            resultPaths.path = innerPathInfo && innerPathInfo.path || originPath;
-
-            var isArray = Array.isArray(firstArg);
-
-            var result = fn(scope, args);
-
-            for(var key in result){
-                if(isArray && isNaN(key)){
-                    continue;
-                }
-
-                resultPaths[key] = appendPath(originPath, createPath(findValueIn(result[key], resultPaths.original)));
-            }
-
-            args.callee.sourcePathInfo = resultPaths;
-
-            return result;
-        };
-    }
-
-    function createResultPathsObject(token, source){
+    function createResultPathsObject(token, source, trackSubPaths){
         var innerPathInfo = token.sourcePathInfo,
             originPath = '[]',
-            resultPaths = source && typeof source === 'object' && new source.constructor();
+            sourcePathInfo = {};
 
-        if(!resultPaths){
-            return;
+        if(trackSubPaths){
+            sourcePathInfo.subPaths = source && typeof source === 'object' && new source.constructor();
         }
 
         if(token instanceof Gel.Token){
             if(token instanceof PathToken){
                 originPath = token.original;
-                resultPaths.original = token.result;
+                sourcePathInfo.original = token.result;
             }
         }
-        resultPaths.original = innerPathInfo && innerPathInfo.original || token.result;
-        resultPaths.path = innerPathInfo && innerPathInfo.path || originPath;
+        sourcePathInfo.original = innerPathInfo && innerPathInfo.original || token.result;
+        sourcePathInfo.path = innerPathInfo && innerPathInfo.path || originPath;
 
-        return resultPaths;
+        return sourcePathInfo;
+    }
+
+    function createKeytracker(fn){
+        return function(scope, args){
+            var firstArgToken = args.getRaw(0),
+                source = args.get(0),
+                result,
+                isArray,
+                innerPathInfo,
+                sourcePathInfo;
+
+            if(!source){
+                return;
+            }
+
+            isArray = Array.isArray(source);
+
+            //Run the function
+            result = fn(scope, args);
+
+            innerPathInfo = firstArgToken.sourcePathInfo;
+            sourcePathInfo = createResultPathsObject(firstArgToken, source, true);
+
+            if(sourcePathInfo.subPaths){
+                for(var key in result){
+                    if(isArray && isNaN(key)){
+                        continue;
+                    }
+
+                    sourcePathInfo.subPaths[key] = appendPath(sourcePathInfo.path, createPath(findValueIn(result[key], sourcePathInfo.original)));
+                }
+            }
+
+            args.callee.sourcePathInfo = sourcePathInfo;
+
+            return result;
+        };
     }
 
     var originalFilter = gel.scope.filter;
+    function addResultItem(resultList, item, key, sourcePathInfo, innerPathInfo){
+        resultList.push(item);
+        if(sourcePathInfo.subPaths){
+            sourcePathInfo.subPaths[key] = innerPathInfo && innerPathInfo.subPaths && innerPathInfo.subPaths[key] || appendPath(sourcePathInfo.path, createPath(key));
+        }
+    }
     gel.scope.filter = function(scope, args) {
         var firstArgToken = args.getRaw(0),
             source = args.get(0),
-            resultPaths = createResultPathsObject(firstArgToken, source),
+            sourcePathInfo = createResultPathsObject(firstArgToken, source, true),
             innerPathInfo = firstArgToken.sourcePathInfo,
             filteredList = source && typeof source === 'object' && new source.constructor();
 
@@ -277,27 +298,78 @@ function newGedi(model) {
             item = source[key];
             if(typeof functionToCompare === "function"){
                 if(scope.callWith(functionToCompare, [item])){
-                    filteredList.push(item);
-                    resultPaths && (resultPaths[key] = innerPathInfo && innerPathInfo[key] || appendPath(resultPaths.path, createPath(key)));
+                    addResultItem(filteredList, item, key, sourcePathInfo, innerPathInfo);
                 }
             }else{
                 if(item === functionToCompare){
-                    filteredList.push(item);
-                    resultPaths && (resultPaths[key] = innerPathInfo && innerPathInfo[key] || appendPath(resultPaths.path, createPath(key)));
+                    addResultItem(filteredList, item, key, sourcePathInfo, innerPathInfo);
                 }
             }
         }
 
-        args.callee.sourcePathInfo = resultPaths;
+        args.callee.sourcePathInfo = sourcePathInfo;
 
         return filteredList;
     };
 
-    var originalSlice = gel.scope.slice;
-    gel.scope.slice = createKeytracker(originalSlice);
+    gel.scope.slice = function(scope, args){
+        var sourceTokenIndex = 0,
+            sourceToken,
+            source = args.next(),
+            start,
+            end,
+            sourcePathInfo,
+            innerPathInfo;
+
+        if(args.hasNext()){
+            start = source;
+            source = args.next();
+            sourceTokenIndex++;
+        }
+        if(args.hasNext()){
+            end = source;
+            source = args.next();
+            sourceTokenIndex++;
+        }
+
+        if(!source || !source.slice){
+            return;
+        }
+
+        // clone source
+        source = source.slice();
+
+        sourceToken = args.getRaw(sourceTokenIndex);
+        sourcePathInfo = createResultPathsObject(sourceToken, source, true),
+        innerPathInfo = sourceToken.sourcePathInfo;
+
+        var result = source.slice(start, end);
+
+        if(sourcePathInfo.subPaths){
+            sourcePathInfo.subPaths = innerPathInfo && innerPathInfo.subPaths && innerPathInfo.subPaths.slice(start, end);
+        }
+
+        args.callee.sourcePathInfo = sourcePathInfo;
+
+        return result;
+    };
 
     var originalSort = gel.scope.sort;
     gel.scope.sort = createKeytracker(originalSort);
+
+    gel.scope.last = function(scope, args){
+        var sourceToken = args.getRaw(0),
+            source = args.get(0),
+            sourcePathInfo = createResultPathsObject(sourceToken, source),
+            innerPathInfo = sourceToken.sourcePathInfo;
+
+        if(sourcePathInfo && innerPathInfo && innerPathInfo){
+            sourcePathInfo.path = innerPathInfo.subPaths && innerPathInfo.subPaths[innerPathInfo.subPaths.length - 1] || appendPath(sourcePathInfo.path, createPath(source.length - 1));
+            args.callee.sourcePathInfo = sourcePathInfo;
+        }
+
+        return source[source.length - 1];
+    };
 
     var tokenConverters = (function(){
             var result = {},
@@ -314,9 +386,9 @@ function newGedi(model) {
     tokenConverters.PeriodToken.prototype.evaluate = function(scope){
         var targetPath;
 
-        if(this.targetToken instanceof PathToken){
-            targetPath = this.targetToken.original
-        }else if(this.targetToken.sourcePathInfo){
+        originalPeriodEvaluate.call(this, scope);
+
+        if(this.targetToken.sourcePathInfo){
             targetPath = this.targetToken.sourcePathInfo.path
         }
 
@@ -326,7 +398,6 @@ function newGedi(model) {
                 path: appendPath(targetPath, createPath(this.identifierToken.original))
             };
         }
-        originalPeriodEvaluate.call(this, scope);
     };
 
     //***********************************************
@@ -872,7 +943,7 @@ function newGedi(model) {
                     //named
                     while(absoluteParts.slice(-1).pop() !== argument){
                         if(absoluteParts.length === 0){
-                            throw "Named path part was not found: '" + pathPart + "', in path: '" + path + "'.";
+                            throw "Named path part was not found: '" + pathPart + "', in path: '" + arguments[argumentIndex] + "'.";
                         }
                         lastRemoved = absoluteParts.pop();
                     }
@@ -923,6 +994,30 @@ function newGedi(model) {
     //
     //***********************************************
 
+    function getSourcePathInfo(expression, parentPath, subPathOpperation){
+        var gelResult,
+            scope = {
+                _gediModelContext_: parentPath
+            };
+
+        var resultToken = gel.evaluate(expression, scope, true)[0],
+            sourcePathInfo = resultToken.sourcePathInfo;
+
+        if(sourcePathInfo){
+            if(sourcePathInfo.subPaths){
+                each(sourcePathInfo.subPaths, function(item){
+                    subPathOpperation(item);
+                });
+                return true;
+            }
+            expression = sourcePathInfo.path;
+        }
+
+        return expression;
+    }
+
+    function DeletedItem(){}
+
     function modelSet(expression, value, parentPath, dirty) {
         if(typeof expression === 'object' && !createPath(expression)){
             dirty = value;
@@ -933,27 +1028,24 @@ function newGedi(model) {
             parentPath = undefined;
         }
 
-        if(expression && gel){
-            var gelResult,
-                scope = {
-                    _gediModelContext_: parentPath
-                };
-
-            var resultToken = gel.evaluate(expression, scope, true)[0],
-                sourcePathInfo = resultToken.sourcePathInfo;
-
-            if(sourcePathInfo){
-                expression = sourcePathInfo.path;
-            }else{
-                parentPath = parentPath || createPath();
-
-                expression = resolvePath(parentPath, expression);
+        if(expression && gel && !arguments[4]){
+            expression = getSourcePathInfo(expression, parentPath, function(subPath){
+                modelSet(subPath, value, parentPath, dirty, true);
+            });
+            if(expression === true){
+                return;
             }
         }
 
+        parentPath = parentPath || createPath();
+        expression = resolvePath(parentPath, expression);
+
+
         setDirtyState(expression, dirty);
         set(expression, value, model);
-        trigger(expression);
+        if(!(value instanceof DeletedItem)){
+            trigger(expression);
+        }
     }
 
     //***********************************************
@@ -962,26 +1054,59 @@ function newGedi(model) {
     //
     //***********************************************
 
-    function modelRemove(path, parentPath, dirty) {
+    function modelRemove(expression, parentPath, dirty) {
         if(parentPath instanceof Boolean){
             dirty = parentPath;
             parentPath = undefined;
         }
 
+        if(expression && gel && !arguments[3]){
+            parentPaths = {};
+            expression = getSourcePathInfo(expression, parentPath, function(subPath){
+                modelSet(subPath, new DeletedItem(), parentPath, dirty, true);
+                parentPaths[appendPath(subPath, createPath(gediConstructor.upALevel))] = null;
+            });
+
+            for(var key in parentPaths){
+                if(parentPaths.hasOwnProperty(key)){
+                    var parentObject = get(resolvePath(parentPath, key), model),
+                        isArray = Array.isArray(parentObject);
+
+                    if(isArray){
+                        for(var i = 0; i < parentObject.length; i++){
+                            if(parentObject[i] instanceof DeletedItem){
+                                parentObject.splice(i, 1);
+                                i--;
+                            }
+                        }
+                    }else{
+                        for(var key in parentObject){
+                            if(parentObject[key] instanceof DeletedItem){
+                                delete parentObject[key];
+                            }
+                        }
+                    }
+                }
+            }
+
+            if(expression === true){
+                return;
+            }
+        }
+
         parentPath = parentPath || createPath();
+        expression = resolvePath(parentPath, expression);
 
-        path = resolvePath(parentPath, path);
+        setDirtyState(expression, dirty);
 
-        setDirtyState(path, dirty);
-
-        var reference = remove(path, model);
+        var reference = remove(expression, model);
 
         if(Array.isArray(reference)){
             //trigger one above
-            path = resolvePath('[/]', appendPath(path, createPath(gediConstructor.upALevel)));
+            expression = resolvePath('[/]', appendPath(expression, createPath(gediConstructor.upALevel)));
         }
 
-        trigger(path);
+        trigger(expression);
     }
 
     //***********************************************
@@ -990,11 +1115,20 @@ function newGedi(model) {
     //
     //***********************************************
 
-    function setDirtyState(path, dirty, parentPath) {
+    function setDirtyState(expression, dirty, parentPath) {
 
         var reference = dirtyModel;
 
-        if(!createPath(path)){
+        if(expression && gel && !arguments[3]){
+            expression = getSourcePathInfo(expression, parentPath, function(subPath){
+                setDirtyState(subPath, dirty, parentPath, true);
+            });
+            if(expression === true){
+                return;
+            }
+        }
+
+        if(!createPath(expression)){
             throw exceptions.invalidPath;
         }
 
@@ -1003,7 +1137,7 @@ function newGedi(model) {
 
         dirty = dirty !== false;
 
-        if(isPathRoot(path)){
+        if(isPathRoot(expression)){
             dirtyModel = {
                 '_isDirty_': dirty
             };
@@ -1012,11 +1146,11 @@ function newGedi(model) {
 
         var index = 0;
 
-        if(isPathAbsolute(path)){
+        if(isPathAbsolute(expression)){
             index = 1;
         }
 
-        var pathParts = pathToParts(resolvePath(parentPath, path));
+        var pathParts = pathToParts(resolvePath(parentPath, expression));
 
         for(; index < pathParts.length; index++){
             var key = pathParts[index];
