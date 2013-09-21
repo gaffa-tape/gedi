@@ -58,15 +58,15 @@ This object makes working with paths easier:
 
 You can go up levels to a specific key in a path:
 
-    var resolvedPath = new Path('[/users/5/docs/4/title]').append('[..docs]');
+    var resolvedPath = new Path('[/accounts/5/docs/4/title]').append('[..docs]');
     
-    // resolvedPath will be [/users/5/docs]
+    // resolvedPath will be [/accounts/5/docs]
 
 You can go to the last removed key after going up a level:
 
-    var resolvedPath = new Path('[/users/5/docs/4/title]').append('[..users/#/id]');
+    var resolvedPath = new Path('[/accounts/5/docs/4/title]').append('[..accounts/#/id]');
     
-    // resolvedPath will be [/users/5/id]
+    // resolvedPath will be [/accounts/5/id]
     
 ### Expressions (Only if Gel is available) ###
 
