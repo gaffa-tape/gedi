@@ -253,6 +253,8 @@ PeriodToken.prototype.evaluate = function(scope){
         this.result = undefined;
     }
 
+    var targetPath;
+
     if(this.targetToken.sourcePathInfo){
         targetPath = this.targetToken.sourcePathInfo.path
     }
@@ -283,7 +285,7 @@ FunctionToken.prototype.evaluate = function(scope){
         for(var i = 0; i < parameterNames.length; i++){
             var parameterToken = args.getRaw(i);
             scope.set(parameterNames[i].original, args.get(i));
-            if(parameterToken instanceof Gel.Token && parameterToken.sourcePathInfo){
+            if(parameterToken instanceof Token && parameterToken.sourcePathInfo){
                 scope.set('__sourcePathInfoFor__' + parameterNames[i].original, parameterToken.sourcePathInfo);
             }
         }
@@ -298,46 +300,6 @@ FunctionToken.prototype.evaluate = function(scope){
     };
 };
 
-function detectPathToken(substring){
-    if (substring.charAt(0) === '[') {
-        var index = 1;
-
-        do {
-            if (
-                (substring.charAt(index) === '\\' && substring.charAt(index + 1) === '\\') || // escaped escapes
-                (substring.charAt(index) === '\\' && (substring.charAt(index + 1) === '[' || substring.charAt(index + 1) === ']')) //escaped braces
-            ) {
-                index++;
-            }
-            else if(substring.charAt(index) === ']'){
-                var original = substring.slice(0, index+1);
-
-                return new PathToken(
-                    original,
-                    original.length
-                );
-            }
-            index++;
-        } while (index < substring.length);
-    }
-}
-
-function PathToken(){}
-PathToken = createSpec(PathToken, Gel.Token);
-PathToken.prototype.precedence = 4;
-PathToken.tokenise = detectPathToken;
-PathToken.prototype.evaluate = function(scope){
-    this.path = this.original;
-    this.result = get(resolvePath(scope.get('_gediModelContext_'), this.original), model);
-    this.sourcePathInfo = {
-        path: this.original
-    };
-};
-gediConstructor.PathToken = PathToken;
-gel.tokenConverters.push(PathToken);
-
-
-
 function createResultPathsObject(token, source, trackSubPaths){
     var innerPathInfo = token.sourcePathInfo,
         originPath = '[]',
@@ -347,11 +309,9 @@ function createResultPathsObject(token, source, trackSubPaths){
         sourcePathInfo.subPaths = source && typeof source === 'object' && new source.constructor();
     }
 
-    if(token instanceof Gel.Token){
-        if(token instanceof PathToken){
-            originPath = token.original;
-            sourcePathInfo.original = token.result;
-        }
+    if(token instanceof Token && token.name === 'PathToken'){
+        originPath = token.original;
+        sourcePathInfo.original = token.result;
     }
     sourcePathInfo.original = innerPathInfo && innerPathInfo.original || token.result;
     sourcePathInfo.path = innerPathInfo && innerPathInfo.path || originPath;
@@ -366,6 +326,60 @@ function addResultItem(resultList, item, key, sourcePathInfo, innerPathInfo){
     }
 }
 
+function ksort(array, sourceSubPaths, scope, sortFunction){
+
+    if(array.length < 2){
+        return {
+            values: array,
+            paths: sourceSubPaths
+        };
+    }
+
+    var source = array.slice(),
+        left = [],
+        pivot = source.splice(source.length/2,1).pop(),
+        pivotPath = sourceSubPaths.splice(sourceSubPaths.length/2,1).pop(),
+        right = [],
+        result,
+        resultPaths;
+
+    var leftPaths = [];
+    var rightPaths = [];
+
+    for(var i = 0; i < source.length; i++){
+        var item = source[i];
+        if(scope.callWith(sortFunction, [item, pivot]) > 0){
+            right.push(item);
+            rightPaths.push(sourceSubPaths[i]);
+        }else{
+            left.push(item);
+            leftPaths.push(sourceSubPaths[i]);
+        }
+    }
+
+    var leftResult = ksort(left, leftPaths, scope, sortFunction);
+
+    left = leftResult.values;
+    leftPaths = leftResult.paths;
+
+    left.push(pivot);
+    leftPaths.push(pivotPath);
+
+    var rightResult = ksort(right, rightPaths, scope, sortFunction);
+
+    right = rightResult.values;
+    rightPaths = rightResult.paths;
+
+    resultPaths = leftPaths.concat(rightPaths);
+
+    result = left.concat(right);
+
+    return {
+        values: result,
+        paths: resultPaths
+    };
+}
+
 var tokenConverters = [
         StringToken,
         String2Token,
@@ -378,8 +392,7 @@ var tokenConverters = [
         DelimiterToken,
         IdentifierToken,
         PeriodToken,
-        FunctionToken,
-        PathToken
+        FunctionToken
     ],
     scope = {
         "toString":function(scope, args){
@@ -584,23 +597,30 @@ var tokenConverters = [
             return flatten(target);
         },
         "sort": function(scope, args) {
-            var args = args.all(),
-                result;
+            var sourceToken = args.getRaw(0),
+                source = args.next(),
+                sortFunction = args.next(),
+                result,
+                sourceArrayKeys,
+                sortValues = [];
+                sourcePathInfo = createResultPathsObject(sourceToken, source, true),
+                innerPathInfo = sourceToken.sourcePathInfo,
+                filteredList = source && typeof source === 'object' && new source.constructor();
 
-            var array = args[0];
-            var functionToCompare = args[1];
-
-            if (Array.isArray(array)) {
-
-                result = array.slice().sort(function(a,b){
-                    return scope.callWith(functionToCompare, [a,b]);
-                });
-
-                return result;
-
-            }else {
+            if(!Array.isArray(source)){
                 return;
             }
+
+            for(var i = 0; i < source.length; i++){
+                sourcePathInfo.subPaths[i] = (innerPathInfo && innerPathInfo.subPaths && innerPathInfo.subPaths[i]) || paths.append(sourcePathInfo.path, paths.create(i));
+            }
+
+            result = ksort(source, sourcePathInfo.subPaths, scope, sortFunction);
+            sourcePathInfo.subPaths = result.paths;
+
+            args.callee.sourcePathInfo = sourcePathInfo;
+
+            return result.values;
         },
         "filter": function(scope, args) {
             var firstArgToken = args.getRaw(0),
@@ -960,7 +980,7 @@ Gel = function(){
         return gel.lang.tokenise(expression, this.tokenConverters);
     }
     gel.evaluate = function(expression, injectedScope, returnAsTokens){
-        var scope = new Lang.Scope();
+        var scope = new Scope();
 
         scope.add(this.scope).add(injectedScope);
 
@@ -972,7 +992,6 @@ Gel = function(){
     return gel;
 };
 
-Gel.Token = Lang.Token;
-Gel.Scope = Lang.Scope;
-
+Gel.Token = Token;
+Gel.Scope = Scope;
 module.exports = Gel;

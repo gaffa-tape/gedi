@@ -7,19 +7,15 @@
 //THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 var Gel = require('./gel'),
+    createPathToken = require('./pathToken'),
+    Token = Gel.Token,
+    detectPath = require('./detectPath'),
     paths = require('./paths'),
+    pathConstants = paths.constants,
     createSpec = require('spec-js');
+
 //Create gedi
 var gediConstructor = newGedi;
-
-//"constants"
-gediConstructor.pathSeparator = "/";
-gediConstructor.upALevel = "..";
-gediConstructor.currentKey = "#";
-gediConstructor.rootPath = "";
-gediConstructor.pathStart = "[";
-gediConstructor.pathEnd = "]";
-gediConstructor.pathWildcard = "*";
 
 var exceptions = {
     invalidPath: 'Invalid path syntax'
@@ -51,6 +47,8 @@ function newGedi(model) {
 
         // gel instance
         gel;
+
+    var PathToken = createPathToken(get, model);
 
     //internal functions
 
@@ -120,6 +118,8 @@ function newGedi(model) {
     //***********************************************
 
     gel = new Gel();
+
+    gel.tokenConverters.push(PathToken);
 
     gel.scope.isDirty = function(scope, args){
         var token = args.raw()[0];
@@ -355,7 +355,7 @@ function newGedi(model) {
                         callbackBinding = callback.binding,
                         callbackBindingParts,
                         parentPath = callback.parentPath,
-                        wildcardIndex = callbackBinding.indexOf(gediConstructor.pathWildcard),
+                        wildcardIndex = callbackBinding.indexOf(pathConstants.wildcard),
                         wildcardMatchFail;
 
                     if(wildcardIndex >= 0 && getPathsInExpression(callbackBinding)[0] === callbackBinding){
@@ -367,7 +367,7 @@ function newGedi(model) {
                         parentPath = null;
 
                         fastEach(callbackBindingParts, function(pathPart, i){
-                            if(pathPart === gediConstructor.pathWildcard){
+                            if(pathPart === pathConstants.wildcard){
                                 callbackBindingParts[i] = target[i];
                             }else if (pathPart !== target[i]){
                                 return wildcardMatchFail = true;
@@ -465,9 +465,9 @@ function newGedi(model) {
 
         //If the binding has opperators in it, break them apart and set them individually.
         if (!paths.create(binding)) {
-            var paths = getPathsInExpression(binding);
+            var expressionPaths = getPathsInExpression(binding);
 
-            fastEach(paths, function (path) {
+            fastEach(expressionPaths, function (path) {
                 setBinding(path, callback, parentPath);
             });
             return;
@@ -483,7 +483,7 @@ function newGedi(model) {
 
         // Handle wildcards
 
-        var firstWildcardIndex = path.indexOf(gediConstructor.pathWildcard);
+        var firstWildcardIndex = path.indexOf(pathConstants.wildcard);
         if(firstWildcardIndex>=0){
             path = path.slice(0, firstWildcardIndex);
         }
@@ -557,9 +557,9 @@ function newGedi(model) {
             return;
         }
 
-        var paths = getPathsInExpression(path);
-        if(paths.length > 1){
-            fastEach(paths, function(path){
+        var expressionPaths = getPathsInExpression(path);
+        if(expressionPaths.length > 1){
+            fastEach(expressionPaths, function(path){
                 removeBinding(path, callback);
             });
             return;
@@ -730,7 +730,7 @@ function newGedi(model) {
             parentPaths = {};
             expression = getSourcePathInfo(expression, parentPath, function(subPath){
                 modelSet(subPath, new DeletedItem(), parentPath, dirty, true);
-                parentPaths[appendPath(subPath, paths.create(gediConstructor.upALevel))] = null;
+                parentPaths[paths.append(subPath, paths.create(pathConstants.upALevel))] = null;
             });
 
             for(var key in parentPaths){
@@ -769,7 +769,7 @@ function newGedi(model) {
 
         if(Array.isArray(reference)){
             //trigger one above
-            expression = paths.resolve('[/]', appendPath(expression, paths.create(gediConstructor.upALevel)));
+            expression = paths.resolve('[/]', paths.append(expression, paths.create(pathConstants.upALevel)));
         }
 
         trigger(expression);
@@ -876,7 +876,7 @@ function newGedi(model) {
             resolve: paths.resolve,
             isRoot: paths.isRoot,
             isAbsolute: paths.isAbsolute,
-            append: appendPath,
+            append: paths.append,
             toParts: paths.toParts
         },
 

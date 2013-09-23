@@ -1,3 +1,13 @@
+var detectPath = require('./detectPath');
+
+var pathSeparator = "/",
+    upALevel = "..",
+    currentKey = "#",
+    rootPath = "",
+    pathStart = "[",
+    pathEnd = "]",
+    pathWildcard = "*";
+
 function pathToRaw(path) {
     return path && path.slice(1, -1);
 }
@@ -9,7 +19,7 @@ function pathToRaw(path) {
 //***********************************************
 
 function rawToPath(rawPath) {
-    return gediConstructor.pathStart + (rawPath == null ? '' : rawPath) + gediConstructor.pathEnd;
+    return pathStart + (rawPath == null ? '' : rawPath) + pathEnd;
 }
 
 var memoisePathCache = {};
@@ -41,20 +51,20 @@ function resolvePath() {
 
             if(pathParts.length === 0){
                 // Empty path, maintain parent path.
-            } else if (pathPart === gediConstructor.currentKey) {
+            } else if (pathPart === currentKey) {
                 // Has a last removed? Add it back on.
                 if(lastRemoved != null){
                     absoluteParts.push(lastRemoved);
                     lastRemoved = null;
                 }
-            } else if (pathPart === gediConstructor.rootPath) {
+            } else if (pathPart === rootPath) {
                 // Root path? Reset parts to be absolute.
                 absoluteParts = [''];
 
-            } else if (pathPart === gediConstructor.upALevel) {
+            } else if (pathPart === upALevel) {
                 // Up a level? Remove the last item in absoluteParts
                 lastRemoved = absoluteParts.pop();
-            } else if (pathPart.slice(0,2) === gediConstructor.upALevel) {
+            } else if (pathPart.slice(0,2) === upALevel) {
                 var argument = pathPart.slice(2);
                 //named
                 while(absoluteParts.slice(-1).pop() !== argument){
@@ -90,12 +100,12 @@ function createPath(path){
     if(memoisedPathTokens[path]){
         return memoisedPathTokens[path];
     }else if (typeof path === "string"){
-        if(path.charAt(0) === gediConstructor.pathStart) {
+        if(path.charAt(0) === pathStart) {
             var pathString = path.toString(),
-                detectedPathToken = detectPathToken(pathString);
+                detectedPath = detectPath(pathString);
 
-            if (detectedPathToken && detectedPathToken.length === pathString.length) {
-                return memoisedPathTokens[pathString] = detectedPathToken.original;
+            if (detectedPath && detectedPath.length === pathString.length) {
+                return memoisedPathTokens[pathString] = detectedPath;
             } else {
                 return false;
             }
@@ -114,12 +124,12 @@ function createPath(path){
             }
             parts.push(pathPart);
         }
-        return rawToPath(parts.join(gediConstructor.pathSeparator));
+        return rawToPath(parts.join(pathSeparator));
     }
 }
 
 function createRootPath(){
-    return createPath([gediConstructor.rootPath, gediConstructor.rootPath]);
+    return createPath([rootPath, rootPath]);
 }
 
 function pathToParts(path){
@@ -141,14 +151,14 @@ function pathToParts(path){
         if(path === ""){
             return [];
         }
-        return path.split(gediConstructor.pathSeparator);
+        return path.split(pathSeparator);
     }
 
     parts = [];
 
     for(var i = 0; i < path.length; i++){
         currentChar = path.charAt(i);
-        if(currentChar === gediConstructor.pathSeparator){
+        if(currentChar === pathSeparator){
             parts.push(path.slice(lastPartIndex,i));
             lastPartIndex = i+1;
         }else if(currentChar === '\\'){
@@ -157,7 +167,7 @@ function pathToParts(path){
                 path = path.slice(0, i) + path.slice(i + 1);
             }else if(nextChar === ']' || nextChar === '['){
                 path = path.slice(0, i) + path.slice(i + 1);
-            }else if(nextChar === gediConstructor.pathSeparator){
+            }else if(nextChar === pathSeparator){
                 parts.push(path.slice(lastPartIndex), i);
             }
         }
@@ -181,7 +191,7 @@ function appendPath(){
 }
 
 function isPathAbsolute(path){
-    return pathToParts(path)[0] === gediConstructor.rootPath;
+    return pathToParts(path)[0] === rootPath;
 }
 
 function isPathRoot(path){
@@ -196,5 +206,14 @@ module.exports = {
     isRoot: isPathRoot,
     append: appendPath,
     toParts: pathToParts,
-    createRoot: createRootPath
+    createRoot: createRootPath,
+    constants:{
+        separator: pathSeparator,
+        upALevel: upALevel,
+        currentKey: currentKey,
+        root: rootPath,
+        start: pathStart,
+        end: pathEnd,
+        wildcard: pathWildcard
+    }
 };
