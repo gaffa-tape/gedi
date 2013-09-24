@@ -19,10 +19,6 @@ Mantaining hard references to properties is annoying.
 
 Gedi makes it easy, quick, and maintainable.
 
-# Dependencies #
-
-Gedi has no dependencies, however, it is much more powerful with Gel ( https://github.com/gaffa-tape/gel )
-
 # Usage #
 
 ## Instantiation ##
