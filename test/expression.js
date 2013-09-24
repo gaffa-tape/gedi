@@ -138,6 +138,85 @@ test('complex expression setting 3', function(t) {
     t.end();
 });
 
+test('complex expression setting 4', function(t) {
+    var gedi = new Gedi({things:[0,1,2,3,4,5]});
+
+    gedi.set('(findOne [things] {thing (== thing 3)})', 'wat');
+
+    t.plan(1);
+
+    t.deepEqual(
+        gedi.get('[things/3]'),
+        'wat',
+        'set via anon function'
+    );
+
+    t.end();
+});
+
+test('complex expression setting 5', function(t) {
+    var gedi = new Gedi({things:[
+            {prop:1},
+            {prop:2},
+            {prop:3},
+            {prop:4}
+        ]});
+
+    gedi.set('(map [things] {thing thing.prop})', 'wat');
+
+    t.plan(1);
+
+    t.deepEqual(
+        gedi.get('[things]'),
+        [
+            {prop:'wat'},
+            {prop:'wat'},
+            {prop:'wat'},
+            {prop:'wat'}
+        ],
+        'set via map'
+    );
+
+    t.end();
+});
+
+test('complex expression setting 6', function(t) {
+    var gedi = new Gedi({things:[1,2,3], stuff:[4,5,6]});
+
+    gedi.set('(concat (sort [things] {a b (< a b)}) [stuff])', 'wat');
+
+    t.plan(2);
+
+    t.deepEqual(
+        gedi.get('[things]'),
+        ['wat','wat','wat'],
+        'set things via concat'
+    );
+    t.deepEqual(
+        gedi.get('[stuff]'),
+        ['wat','wat','wat'],
+        'set stuff via concat'
+    );
+
+    t.end();
+});
+
+test('complex expression setting 7', function(t) {
+    var gedi = new Gedi({stuff:[1,2,3,4,5]});
+
+    gedi.set('(getValue [stuff] 2)', 'wat');
+
+    t.plan(1);
+
+    t.deepEqual(
+        gedi.get('[stuff/2]'),
+        'wat',
+        'set via getValue'
+    );
+
+    t.end();
+});
+
 test('expression path removing', function(t) {
     var gedi = new Gedi({stuff:{thing:'majigger'}});
 
@@ -217,7 +296,6 @@ test('complex expression removing 2', function(t) {
 
     t.end();
 });
-
 
 test('set explicit dirty expression', function(t) {
     var gedi = new Gedi({stuff:[1,2,3,4,5]});
