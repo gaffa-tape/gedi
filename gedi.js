@@ -753,7 +753,7 @@ function newGedi(model) {
                         }
                     }
 
-                    trigger(parentPath);
+                    trigger(key);
                 }
             }
 
