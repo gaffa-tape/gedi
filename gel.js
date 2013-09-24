@@ -322,7 +322,7 @@ function createResultPathsObject(token, source, trackSubPaths){
 function addResultItem(resultList, item, key, sourcePathInfo, innerPathInfo){
     resultList.push(item);
     if(sourcePathInfo.subPaths){
-        sourcePathInfo.subPaths[key] = innerPathInfo && innerPathInfo.subPaths && innerPathInfo.subPaths[key] || paths.append(sourcePathInfo.path, paths.create(key));
+        sourcePathInfo.subPaths.push(innerPathInfo && innerPathInfo.subPaths && innerPathInfo.subPaths[key] || paths.append(sourcePathInfo.path, paths.create(key)));
     }
 }
 
@@ -604,8 +604,7 @@ var tokenConverters = [
                 sourceArrayKeys,
                 sortValues = [];
                 sourcePathInfo = createResultPathsObject(sourceToken, source, true),
-                innerPathInfo = sourceToken.sourcePathInfo,
-                filteredList = source && typeof source === 'object' && new source.constructor();
+                innerPathInfo = sourceToken.sourcePathInfo;
 
             if(!Array.isArray(source)){
                 return;
