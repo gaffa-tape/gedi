@@ -68,7 +68,7 @@ You can go to the last removed key after going up a level:
 
     // resolvedPath will be [/accounts/5/id]
 
-### Expressions (Only if Gel is available) ###
+### Expressions ###
 
 Expressions can be used to manipulate the data as it is being retrieved from the model. Gedi Expressions use Gel to perform opperations.
 
@@ -76,10 +76,9 @@ Expressions are logically functional, and as such have no side-effects.
 
 ### Get ###
 
-    model.get([string/Path/Expression])
+    model.get([path/expression])
 
-get will return the value of the model, at the path specified. The path may be a string, an instance of a Path, an instance of an Expression, or falsy.
-if get is called with a falsy path, eg undefined, it will return the entire model.
+get will return the value of the model, at the path specified. if get is called with a falsy path, eg undefined, it will return the entire model.
 
     model.get();
 
@@ -99,9 +98,7 @@ Access an index
 
 Use an expression to get the length of an array:
 
-    var someArrayLengthExpression = new model.Expression('(length [property/someArray])');
-
-    model.get(someArrayLengthExpression);
+    model.get('(length [property/someArray])');
 
     // will throw a "parameter was not an object" error because the array doesn't exist..
 
