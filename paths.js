@@ -97,9 +97,12 @@ function createPath(path){
     }
 
     // passed in an Expression or an 'expression formatted' Path (eg: '[bla]')
-    if(memoisedPathTokens[path]){
-        return memoisedPathTokens[path];
-    }else if (typeof path === "string"){
+    if (typeof path === "string"){
+
+        if(memoisedPathTokens[path]){
+            return memoisedPathTokens[path];
+        }
+
         if(path.charAt(0) === pathStart) {
             var pathString = path.toString(),
                 detectedPath = detectPath(pathString);

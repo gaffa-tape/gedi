@@ -5,7 +5,7 @@
     "tags": [
         "DOM"
     ],
-    "version": "0.6.2",
+    "version": "0.7.0",
     "main": "gedi.js",
     "dependencies": {
         "lang-js":"0.1.x",
