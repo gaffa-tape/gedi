@@ -5,10 +5,10 @@
     "tags": [
         "DOM"
     ],
-    "version": "0.6.2",
+    "version": "0.7.0",
     "main": "gedi.js",
     "dependencies": {
-        "gel-js":"0.4.x",
+        "lang-js":"0.1.x",
         "spec-js":"0.0.x"
     },
     "devDependencies": {
