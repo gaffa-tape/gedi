@@ -7,7 +7,7 @@ Gaffa evented data interface
 
 # What #
 
-A powerful model API wrapper.
+An *EXTREMELY* powerful model API wrapper.
 
 # Why? #
 
@@ -74,15 +74,9 @@ Expressions can be used to manipulate the data as it is being retrieved from the
 
 Expressions are logically functional, and as such have no side-effects.
 
-Documentation is not yet available here: https://github.com/gaffa-tape/gel
-
-Gedi adds a custom 'path' token to Gel to allow paths to be used within expressions:
-
-    new Expression('(last [property/someArray])');
-
 ### Get ###
 
-    model.get('[string/Path/Expression]')
+    model.get([string/Path/Expression])
 
 get will return the value of the model, at the path specified. The path may be a string, an instance of a Path, an instance of an Expression, or falsy.
 if get is called with a falsy path, eg undefined, it will return the entire model.
@@ -166,6 +160,26 @@ If you use an integer in a path, gedi assumes the object is an array:
     model.set('[missingArray/0]', 'item');
 
     // will create a new array at model.missingArray
+
+You can also set into expressions.
+
+    model.set('(last [someArray])', 'item');
+
+    // will set the last index of someArray to 'item'
+    // Assuming someArray exists
+
+You can also set into the sub-paths of an expression. (Oh yes..)
+
+    model.set('(map (filter [someArray] {item (>item.age 100)}) {item item.dead})', true);
+
+    // will set all dead properties on items in someArray over
+    // the age of 100 to true
+
+You can also remove via sub-paths of an expression. (lel..)
+
+    model.remove('(filter [someArray] {item item.dead})');
+
+    // will remove all dead items in someArray
 
 ## Binding to changes ##
 
