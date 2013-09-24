@@ -752,6 +752,8 @@ function newGedi(model) {
                             }
                         }
                     }
+
+                    trigger(parentPath);
                 }
             }
 
