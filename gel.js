@@ -1,5 +1,5 @@
 var Lang = require('lang-js'),
-    paths = require('./paths'),
+    paths = require('gedi-paths'),
     createNestingParser = Lang.createNestingParser,
     detectString = Lang.detectString,
     Token = Lang.Token,

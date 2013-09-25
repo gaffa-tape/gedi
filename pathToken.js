@@ -1,8 +1,8 @@
 var Lang = require('lang-js'),
     Token = Lang.Token,
-    paths = require('./paths'),
+    paths = require('gedi-paths'),
     createSpec = require('spec-js'),
-    detectPath = require('./detectPath');
+    detectPath = require('gedi-paths/detectPath');
 
 module.exports = function(get, model){
 

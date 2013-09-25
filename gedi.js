@@ -9,8 +9,7 @@
 var Gel = require('./gel'),
     createPathToken = require('./pathToken'),
     Token = Gel.Token,
-    detectPath = require('./detectPath'),
-    paths = require('./paths'),
+    paths = require('gedi-paths'),
     pathConstants = paths.constants,
     createSpec = require('spec-js');
 
