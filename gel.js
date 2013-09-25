@@ -722,11 +722,11 @@ var tokenConverters = [
                 sourcePaths = Array.isArray(result) && [];
 
             var addPaths = function(){
-                if(sourcePaths){
+                if(sourcePaths && argToken && argToken.sourcePathInfo){
                     var argToken = args.getRaw(argCount++),
                         argSourcePathInfo = argToken && argToken.sourcePathInfo;
 
-                    if(Array.isArray(argSourcePathInfo.subPaths)){
+                    if(argSourcePathInfo &&Array.isArray(argSourcePathInfo.subPaths)){
                         sourcePaths = sourcePaths.concat(argSourcePathInfo.subPaths);
                     }else{
                         for(var i = 0; i < argToken.result.length; i++){
