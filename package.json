@@ -10,7 +10,7 @@
     "main": "gedi.js",
     "dependencies": {
         "gedi-paths":"0.1.x",
-        "gel":"0.5.x",
+        "gel-js":"0.5.x",
         "lang-js":"0.1.x",
         "spec-js":"0.0.x"
     },
