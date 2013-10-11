@@ -31,7 +31,7 @@ test('removed reference bind', function(t) {
 
     t.plan(2);
 
-    // Should fire once when [foo] is set
+    // Should fire once when [foo] is removed
     gedi.bind('[foo/things]', function(){
         t.pass('detected [foo/things] change');
     });
@@ -41,7 +41,7 @@ test('removed reference bind', function(t) {
         t.pass('detected [bar/things] change');
     });
 
-    gedi.set('[foo]', 'foo');
+    gedi.remove('[foo]');
 
     gedi.set('[bar/things]', 'things');
 
@@ -89,6 +89,42 @@ test('recursive added reference bind', function(t) {
     });
 
     gedi.set('[foo/things]', 'things');
+
+    t.end();
+});
+
+
+test('array reference bind', function(t) {
+    t.plan(3);
+
+    var items = [
+            {
+                thing:'1'
+            },
+            {
+                thing:'2'
+            },
+            {
+                thing:'3'
+            },
+            {
+                thing:'4'
+            }
+        ];
+
+    var model = new Gedi({items: items});
+
+    model.bind('[items]', function(event){
+        t.pass('detected [items] change');
+    });
+
+    model.bind('[item]', function(event){
+        t.pass('detected [item] change');
+    });
+
+    model.set('[item]', model.get('[items/2]'));
+
+    model.set('[item/thing]', 'stuff');
 
     t.end();
 });

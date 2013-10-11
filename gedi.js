@@ -59,11 +59,12 @@ function newGedi(model) {
             return;
         }
 
-        var objectReferences = modelReferences.get(object);
+        var path = paths.resolve(paths.createRoot(),path),
+            objectReferences = modelReferences.get(object);
 
         if(!objectReferences){
             objectReferences = [];
-            modelReferences.set(object, []);
+            modelReferences.set(object, objectReferences);
         }
 
         if(objectReferences.indexOf(path) < 0){
@@ -75,7 +76,7 @@ function newGedi(model) {
 
             // Faster to check again here than to create pointless paths.
             if(prop && typeof prop === 'object' && prop !== object){
-                addModelReference(paths.resolve(paths.createRoot(),path, paths.create(key)), prop);
+                addModelReference(paths.append(path, paths.create(key)), prop);
             }
         }
     }
@@ -85,7 +86,8 @@ function newGedi(model) {
             return;
         }
 
-        var objectReferences = modelReferences.get(object),
+        var path = paths.resolve(paths.createRoot(),path),
+            objectReferences = modelReferences.get(object),
             refIndex;
 
         if(!objectReferences){
@@ -103,7 +105,7 @@ function newGedi(model) {
 
             // Faster to check again here than to create pointless paths.
             if(prop && typeof prop === 'object' && prop !== object){
-                removeModelReference(paths.resolve(paths.createRoot(), path, paths.create(key)), prop);
+                removeModelReference(paths.append(path, paths.create(key)), prop);
             }
         }
     }
@@ -858,16 +860,18 @@ function newGedi(model) {
 
         setDirtyState(expression, dirty);
 
-        var reference = remove(expression, model);
+        var removedItem = get(expression, model),
+            parentObject = remove(expression, model);
 
-        if(Array.isArray(reference)){
+        if(Array.isArray(parentObject)){
             //trigger one above
-            expression = paths.resolve('[/]', paths.append(expression, paths.create(pathConstants.upALevel)));
+            trigger(paths.resolve('[/]', paths.append(expression, paths.create(pathConstants.upALevel))));
+        }else{
+            trigger(expression);
         }
 
-        trigger(expression);
+        removeModelReference(expression, removedItem);
         triggerModelReferences(expression);
-        removeModelReference(expression, reference);
     }
 
     //***********************************************
