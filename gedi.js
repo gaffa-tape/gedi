@@ -549,10 +549,14 @@ function newGedi(model) {
 
         //If the binding has opperators in it, break them apart and set them individually.
         if (!paths.create(binding)) {
-            var expressionPaths = getPathsInExpression(binding);
+            var expressionPaths = getPathsInExpression(binding),
+                boundExpressions = {};
 
             fastEach(expressionPaths, function (path) {
-                setBinding(path, callback, parentPath);
+                if(!boundExpressions[path]){
+                    boundExpressions[path] = true;
+                    setBinding(path, callback, parentPath);
+                }
             });
             return;
         }
