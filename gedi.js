@@ -97,7 +97,7 @@ function newGedi(model) {
         objectReferences.splice(objectReferences.indexOf(path),1);
 
         if(!objectReferences.length){
-            modelReferences.delete(object);
+            modelReferences['delete'](object);
         }
 
         for(var key in object){
