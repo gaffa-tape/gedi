@@ -9,3 +9,4 @@ require('./escapes');
 require('./debind');
 require('./path');
 require('./wildcards');
+require('./reference');

@@ -7,6 +7,7 @@
 //THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 var Gel = require('gel-js'),
+    WeakMap = require('weakmap'),
     createPathToken = require('./pathToken'),
     Token = Gel.Token,
     paths = require('gedi-paths'),
@@ -38,6 +39,9 @@ function newGedi(model) {
         // Storage for model event handles
     var internalBindings = [],
 
+        // Storage for tracking references within the model
+        modelReferences = new WeakMap(),
+
         // Storage for tracking the dirty state of the model
         dirtyModel = {},
 
@@ -45,9 +49,88 @@ function newGedi(model) {
         eventsPaused = false,
 
         // gel instance
-        gel;
+        gel,
 
-    var PathToken = createPathToken(get, model);
+        PathToken = createPathToken(get, model);
+
+    // Add a new object who's references should be tracked.
+    function addModelReference(path, object){
+        if(!object || typeof object !== 'object'){
+            return;
+        }
+
+        var objectReferences = modelReferences.get(object);
+
+        if(!objectReferences){
+            objectReferences = [];
+            modelReferences.set(object, []);
+        }
+
+        if(objectReferences.indexOf(path) < 0){
+            objectReferences.push(path);
+        }
+
+        for(var key in object){
+            var prop = object[key];
+
+            // Faster to check again here than to create pointless paths.
+            if(prop && typeof prop === 'object' && prop !== object){
+                addModelReference(paths.resolve(paths.createRoot(),path, paths.create(key)), prop);
+            }
+        }
+    }
+
+    function removeModelReference(path, object){
+        if(!object || typeof object !== 'object'){
+            return;
+        }
+
+        var objectReferences = modelReferences.get(object),
+            refIndex;
+
+        if(!objectReferences){
+            return;
+        }
+
+        objectReferences.splice(objectReferences.indexOf(path),1);
+
+        if(!objectReferences.length){
+            modelReferences.delete(object);
+        }
+
+        for(var key in object){
+            var prop = object[key];
+
+            // Faster to check again here than to create pointless paths.
+            if(prop && typeof prop === 'object' && prop !== object){
+                removeModelReference(paths.resolve(paths.createRoot(), path, paths.create(key)), prop);
+            }
+        }
+    }
+
+    function triggerModelReferences(targetPath){
+        var parentPath = paths.resolve(paths.createRoot(), targetPath, paths.create(pathConstants.upALevel)),
+            parentObject = get(parentPath, model);
+
+        if(!parentObject || typeof parentObject !== 'object'){
+            return;
+        }
+
+        var objectReferences = modelReferences.get(parentObject);
+
+        if(!objectReferences){
+            return;
+        }
+
+        for(var i = objectReferences.length - 1; i >= 0; i--){
+            if(objectReferences[i] !== parentPath){
+                trigger(objectReferences[i]);
+            }
+        }
+    }
+
+    //Initialise model references
+    addModelReference('[/]', model);
 
     //internal functions
 
@@ -705,11 +788,20 @@ function newGedi(model) {
         parentPath = parentPath || paths.create();
         expression = paths.resolve(parentPath, expression);
 
-
         setDirtyState(expression, dirty);
+
+        var previousValue = get(expression, model);
+
         set(expression, value, model);
+
         if(!(value instanceof DeletedItem)){
+            addModelReference(expression, value);
             trigger(expression);
+            triggerModelReferences(expression);
+        }
+
+        if(!(value && typeof value !== 'object') && previousValue && typeof previousValue === 'object'){
+            removeModelReference(expression, previousValue);
         }
     }
 
@@ -774,6 +866,8 @@ function newGedi(model) {
         }
 
         trigger(expression);
+        triggerModelReferences(expression);
+        removeModelReference(expression, reference);
     }
 
     //***********************************************
