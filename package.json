@@ -6,7 +6,7 @@
     "Model",
     "data"
   ],
-  "version": "0.9.3",
+  "version": "0.9.4",
   "main": "gedi.js",
   "dependencies": {
     "gedi-paths": "0.1.x",

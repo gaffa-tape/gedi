@@ -75,7 +75,7 @@ function newGedi(model) {
             var prop = object[key];
 
             // Faster to check again here than to create pointless paths.
-            if(prop && typeof prop === 'object' && prop !== object){
+            if(prop && typeof prop === 'object' && !modelReferences.has(prop)){
                 addModelReference(paths.append(path, paths.create(key)), prop);
             }
         }

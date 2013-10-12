@@ -128,3 +128,20 @@ test('array reference bind', function(t) {
 
     t.end();
 });
+
+
+test('recursive added reference bind', function(t) {
+    var obj = {},
+        gedi = new Gedi();
+
+    obj.obj = obj;
+
+    t.plan(1);
+
+    // should not cause a stack overflow
+    gedi.set('[obj]', obj);
+
+    t.pass();
+
+    t.end();
+});
