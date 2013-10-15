@@ -6,14 +6,14 @@
     "Model",
     "data"
   ],
-  "version": "0.9.4",
+  "version": "0.9.5",
   "main": "gedi.js",
   "dependencies": {
     "gedi-paths": "0.1.x",
     "gel-js": "0.5.x",
     "lang-js": "0.1.x",
     "spec-js": "0.0.x",
-    "weakmap": "0.0.6"
+    "hybrid-map": "0.1.x"
   },
   "devDependencies": {
     "tape": "1.0.x"
