@@ -45,9 +45,6 @@ function newGedi(model) {
         // Storage for tracking the dirty state of the model
         dirtyModel = {},
 
-        // Whether model events are paused
-        eventsPaused = false,
-
         // gel instance
         gel,
 
@@ -63,12 +60,12 @@ function newGedi(model) {
             objectReferences = modelReferences.get(object);
 
         if(!objectReferences){
-            objectReferences = [];
+            objectReferences = {};
             modelReferences.set(object, objectReferences);
         }
 
-        if(objectReferences.indexOf(path) < 0){
-            objectReferences.push(path);
+        if(!(path in objectReferences)){
+            objectReferences[path] = null;
         }
 
         for(var key in object){
@@ -94,9 +91,9 @@ function newGedi(model) {
             return;
         }
 
-        objectReferences.splice(objectReferences.indexOf(path),1);
+        delete objectReferences[path];
 
-        if(!objectReferences.length){
+        if(!Object.keys(objectReferences).length){
             modelReferences.del(object);
         }
 
@@ -124,9 +121,9 @@ function newGedi(model) {
             return;
         }
 
-        for(var i = objectReferences.length - 1; i >= 0; i--){
-            if(objectReferences[i] !== parentPath){
-                trigger(objectReferences[i]);
+        for(var path in objectReferences){
+            if(path !== parentPath){
+                trigger(path);
             }
         }
     }
@@ -145,11 +142,11 @@ function newGedi(model) {
     //IE Specific idiocy
 
     Array.prototype.indexOf = Array.prototype.indexOf || function (object) {
-        fastEach(this, function (value, index) {
-            if (value === object) {
-                return index;
+        for (var i = 0; i < this.length; i++) {
+            if (this === object){
+                return i;
             }
-        });
+        }
     };
 
     // http://stackoverflow.com/questions/498970/how-do-i-trim-a-string-in-javascript
@@ -161,20 +158,6 @@ function newGedi(model) {
     };
 
     //End IE land.
-
-
-    //***********************************************
-    //
-    //      Array Fast Each
-    //
-    //***********************************************
-
-    function fastEach(array, callback) {
-        for (var i = 0; i < array.length; i++) {
-            if (callback(array[i], i, array)) break;
-        }
-        return array;
-    }
 
     //***********************************************
     //
@@ -208,12 +191,12 @@ function newGedi(model) {
     gel.scope.isDirty = function(scope, args){
         var token = args.raw()[0];
 
-        return isDirty(paths.resolve(scope.get('_gediModelContext_'), (token instanceof PathToken) ? token.original : paths.create()));
+        return isDirty(paths.resolve(scope.get('_gmc_'), (token instanceof PathToken) ? token.original : paths.create()));
     };
 
     gel.scope.getAllDirty = function (scope, args) {
         var token = args.raw()[0],
-            path = paths.resolve(scope.get('_gediModelContext_'), (token instanceof PathToken) && token.original),
+            path = paths.resolve(scope.get('_gmc_'), (token instanceof PathToken) && token.original),
             source = get(path, model),
             result,
             itemPath;
@@ -252,7 +235,7 @@ function newGedi(model) {
             return model;
         }
 
-        var memoiseObject = memoiseCache[path.toString()];
+        var memoiseObject = memoiseCache[path];
         if(memoiseObject && memoiseObject.model === model){
             return memoiseObject.value;
         }
@@ -450,13 +433,15 @@ function newGedi(model) {
                         //null out the now not needed parent path
                         parentPath = null;
 
-                        fastEach(callbackBindingParts, function(pathPart, i){
+                        for(var i = 0; i < callbackBindingParts.length; i++) {
+                            var pathPart = callbackBindingParts[i];
                             if(pathPart === pathConstants.wildcard){
                                 callbackBindingParts[i] = target[i];
                             }else if (pathPart !== target[i]){
                                 return wildcardMatchFail = true;
                             }
-                        });
+                        }
+
                         if(wildcardMatchFail){
                             continue;
                         }
@@ -512,26 +497,6 @@ function newGedi(model) {
 
     //***********************************************
     //
-    //      Pause Model Events
-    //
-    //***********************************************
-
-    function pauseModelEvents() {
-        eventsPaused = true;
-    }
-
-    //***********************************************
-    //
-    //      Resume Model Events
-    //
-    //***********************************************
-
-    function resumeModelEvents() {
-        eventsPaused = false;
-    }
-
-    //***********************************************
-    //
     //      Set Binding
     //
     //***********************************************
@@ -552,12 +517,14 @@ function newGedi(model) {
             var expressionPaths = getPathsInExpression(binding),
                 boundExpressions = {};
 
-            fastEach(expressionPaths, function (path) {
+            for(var i = 0; i < expressionPaths.length; i++) {
+                var path = expressionPaths[i];
                 if(!boundExpressions[path]){
                     boundExpressions[path] = true;
                     setBinding(path, callback, parentPath);
                 }
-            });
+            }
+
             return;
         }
 
@@ -636,9 +603,9 @@ function newGedi(model) {
 
         if(path == null){
             if(callback != null && callback.references){
-                fastEach(callback.references, function(path){
-                    removeBinding(path, callback);
-                });
+                for(var i = 0; i < callback.references.length; i++) {
+                    removeBinding(callback.references[i], callback);
+                }
             }else{
                 internalBindings = [];
             }
@@ -647,9 +614,9 @@ function newGedi(model) {
 
         var expressionPaths = getPathsInExpression(path);
         if(expressionPaths.length > 1){
-            fastEach(expressionPaths, function(path){
-                removeBinding(path, callback);
-            });
+            for(var i = 0; i < expressionPaths.length; i++) {
+                removeBinding(expressionPaths[i], callback);
+            }
             return;
         }
 
@@ -730,7 +697,7 @@ function newGedi(model) {
 
             scope = scope || {};
 
-            scope['_gediModelContext_'] = parentPath;
+            scope['_gmc_'] = parentPath;
 
             return gel.evaluate(expression, scope, returnAsTokens);
         }
@@ -751,7 +718,7 @@ function newGedi(model) {
     function getSourcePathInfo(expression, parentPath, subPathOpperation){
         var gelResult,
             scope = {
-                _gediModelContext_: parentPath
+                _gmc_: parentPath
             };
 
         var resultToken = gel.evaluate(expression, scope, true)[0],

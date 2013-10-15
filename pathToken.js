@@ -19,7 +19,7 @@ module.exports = function(get, model){
     };
     PathToken.prototype.evaluate = function(scope){
         this.path = this.original;
-        this.result = get(paths.resolve(scope.get('_gediModelContext_'), this.original), model);
+        this.result = get(paths.resolve(scope.get('_gmc_'), this.original), model);
         this.sourcePathInfo = {
             path: this.original
         };
