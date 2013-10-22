@@ -799,7 +799,8 @@ function newGedi(model) {
 
             for(var key in parentPaths){
                 if(parentPaths.hasOwnProperty(key)){
-                    var parentObject = get(paths.resolve(parentPath, key), model),
+                    var parentPath = paths.resolve(parentPath, key),
+                        parentObject = get(parentPath, model),
                         isArray = Array.isArray(parentObject);
 
                     if(isArray){
@@ -817,7 +818,7 @@ function newGedi(model) {
                         }
                     }
 
-                    trigger(key);
+                    trigger(parentPath);
                 }
             }
 
