@@ -716,10 +716,10 @@ function newGedi(model) {
     //***********************************************
 
     function getSourcePathInfo(expression, parentPath, subPathOpperation){
-        var gelResult,
-            scope = {
+        var scope = {
                 _gmc_: parentPath
-            };
+            },
+            path;
 
         var resultToken = gel.evaluate(expression, scope, true)[0],
             sourcePathInfo = resultToken.sourcePathInfo;
@@ -729,12 +729,15 @@ function newGedi(model) {
                 each(sourcePathInfo.subPaths, function(item){
                     subPathOpperation(item);
                 });
-                return true;
+                return;
             }
-            expression = sourcePathInfo.path;
+            path = sourcePathInfo.path;
+        }else{
+            path = resultToken.path;
         }
-
-        return expression;
+        if(path){
+            subPathOpperation(path);
+        }
     }
 
     function DeletedItem(){}
@@ -750,12 +753,10 @@ function newGedi(model) {
         }
 
         if(expression && !arguments[4]){
-            expression = getSourcePathInfo(expression, parentPath, function(subPath){
+            getSourcePathInfo(expression, parentPath, function(subPath){
                 modelSet(subPath, value, parentPath, dirty, true);
             });
-            if(expression === true){
-                return;
-            }
+            return;
         }
 
         parentPath = parentPath || paths.create();
@@ -792,7 +793,7 @@ function newGedi(model) {
 
         if(expression && !arguments[3]){
             parentPaths = {};
-            expression = getSourcePathInfo(expression, parentPath, function(subPath){
+            getSourcePathInfo(expression, parentPath, function(subPath){
                 modelSet(subPath, new DeletedItem(), parentPath, dirty, true);
                 parentPaths[paths.append(subPath, paths.create(pathConstants.upALevel))] = null;
             });
@@ -822,9 +823,7 @@ function newGedi(model) {
                 }
             }
 
-            if(expression === true){
-                return;
-            }
+            return;
         }
 
         parentPath = parentPath || paths.create();
@@ -857,12 +856,10 @@ function newGedi(model) {
         var reference = dirtyModel;
 
         if(expression && !arguments[3]){
-            expression = getSourcePathInfo(expression, parentPath, function(subPath){
+            getSourcePathInfo(expression, parentPath, function(subPath){
                 setDirtyState(subPath, dirty, parentPath, true);
             });
-            if(expression === true){
-                return;
-            }
+            return;
         }
 
         if(!paths.create(expression)){
