@@ -2,10 +2,6 @@
   "name": "gedi",
   "description": "An evented data API",
   "author": "Kory Nunn <knunn187@gmail.com>",
-  "tags": [
-    "Model",
-    "data"
-  ],
   "version": "0.9.7",
   "main": "gedi.js",
   "dependencies": {
@@ -44,5 +40,14 @@
   "scripts": {
     "test": "./node_modules/.bin/tape test/all.js"
   },
-  "contributors": []
+  "directories": {
+    "test": "test"
+  },
+  "keywords": [
+    "model",
+    "data",
+    "mdv",
+    "model-driven"
+  ],
+  "license": "MIT"
 }
