@@ -22,6 +22,7 @@ var exceptions = {
 };
 
 var arrayProto = [];
+var isBrowser = typeof Node != 'undefined';
 
 
 //***********************************************
@@ -70,9 +71,10 @@ function newGedi(model) {
 
         for(var key in object){
             var prop = object[key];
+            var ignoreProp = isBrowser && (prop instanceof Node);
 
             // Faster to check again here than to create pointless paths.
-            if(prop && typeof prop === 'object' && !modelReferences.has(prop)){
+            if(prop && typeof prop === 'object' && (! ignoreProp) && !modelReferences.has(prop)){
                 addModelReference(paths.append(path, paths.create(key)), prop);
             }
         }
