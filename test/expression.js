@@ -93,7 +93,7 @@ test('expression multiple path setting relative', function(t) {
 test('complex expression setting', function(t) {
     var gedi = new Gedi({stuff:[1,2,3,4,5]});
 
-    gedi.set('(slice 3 (sort [stuff] {a b (< a b)}))', 'wat');
+    gedi.set('(slice 3 (sort [stuff] {a b (- b a)}))', 'wat');
 
     t.plan(1);
 
@@ -183,7 +183,7 @@ test('complex expression setting 5', function(t) {
 test('complex expression setting 6', function(t) {
     var gedi = new Gedi({things:[1,2,3], stuff:[4,5,6]});
 
-    gedi.set('(concat (sort [things] {a b (< a b)}) [stuff])', 'wat');
+    gedi.set('(concat (sort [things] {a b (- a b)}) [stuff])', 'wat');
 
     t.plan(2);
 
