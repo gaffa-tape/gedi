@@ -10,3 +10,4 @@ require('./debind');
 require('./path');
 require('./wildcards');
 require('./reference');
+require('./dom');

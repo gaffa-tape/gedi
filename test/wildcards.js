@@ -7,7 +7,7 @@ test('wildcard callbacks get triggered', function(t) {
     gedi.bind('[thing/stuff/*/a]', function(){
         t.pass('received change');
     });
-    
+
     t.plan(2);
 
     gedi.set('[thing/stuff/1/a]', 2);
@@ -23,7 +23,7 @@ test('wildcard callbacks get correct value', function(t) {
     gedi.bind('[thing/stuff/*/a]', function(event){
         t.equal(event.getValue(), 2);
     });
-    
+
     t.plan(2);
 
     gedi.set('[thing/stuff/1/a]', 2);
@@ -38,7 +38,7 @@ test('relative wildcard callbacks', function(t) {
     gedi.bind('[*/a]', function(event){
         t.equal(event.getValue(), 2);
     }, '[thing/stuff]');
-    
+
     t.plan(2);
 
     gedi.set('[thing/stuff/1/a]', 2);
@@ -53,7 +53,7 @@ test('multiple wildcards', function(t) {
     gedi.bind('[thing/*/stuff/*/a]', function(event){
         t.pass('received change');
     });
-    
+
     t.plan(3);
 
     gedi.set('[thing/1/stuff/1/a]', 2);
