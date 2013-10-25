@@ -69,12 +69,15 @@ function newGedi(model) {
             objectReferences[path] = null;
         }
 
+        if(isBrowser && object instanceof Node){
+            return;
+        }
+
         for(var key in object){
             var prop = object[key];
-            var ignoreProp = isBrowser && (prop instanceof Node);
 
             // Faster to check again here than to create pointless paths.
-            if(prop && typeof prop === 'object' && (! ignoreProp) && !modelReferences.has(prop)){
+            if(prop && typeof prop === 'object' && !modelReferences.has(prop)){
                 addModelReference(paths.append(path, paths.create(key)), prop);
             }
         }
@@ -802,26 +805,30 @@ function newGedi(model) {
 
             for(var key in parentPaths){
                 if(parentPaths.hasOwnProperty(key)){
-                    var parentPath = paths.resolve(parentPath, key),
+                    var parentPath = paths.resolve(parentPath || paths.createRoot(), paths.create(key)),
                         parentObject = get(parentPath, model),
                         isArray = Array.isArray(parentObject);
 
                     if(isArray){
+                        var anyRemoved;
                         for(var i = 0; i < parentObject.length; i++){
                             if(parentObject[i] instanceof DeletedItem){
                                 parentObject.splice(i, 1);
                                 i--;
+                                anyRemoved = true;
                             }
+                        }
+                        if(anyRemoved){
+                            trigger(paths.append(parentPath));
                         }
                     }else{
                         for(var key in parentObject){
                             if(parentObject[key] instanceof DeletedItem){
                                 delete parentObject[key];
+                                trigger(paths.append(parentPath, paths.create(key)));
                             }
                         }
                     }
-
-                    trigger(parentPath);
                 }
             }
 
