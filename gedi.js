@@ -957,10 +957,76 @@ function newGedi(model) {
             toParts: paths.toParts
         },
 
+        /**
+            ## .get
+
+            model.get(expression, parentPath, scope, returnAsTokens)
+
+            Get data from the model
+
+                // get model.stuff
+                var data = model.get('[stuff]');
+
+            Expressions passed to get will be evaluated by gel:
+
+                // get a list of items that have a truthy .selected property.
+                var items = model.get('(filter [items] {item item.selected})');
+
+            You can scope paths in the expression to a parent path:
+
+                // get the last account.
+                var items = model.get('(last [])', '[accounts]')'
+
+        */
         get: modelGet,
 
+        /**
+            ## .set
+
+            model.set(expression, value, parentPath, dirty)
+
+            Set data into the model
+
+                // set model.stuff to true
+                model.set('[stuff]', true);
+
+            Expressions passed to set will be evaluated by gel:
+
+                // find all items that are not selected and set them to be selected
+                model.set('(map (filter [items] {item (! item.selected)}) {item item.selected})', true);
+
+            You can scope paths in the expression to a parent path:
+
+                // set the last account to a different account.
+                model.set('(last [])', '[accounts]', someAccount);
+
+        */
         set: modelSet,
 
+        /**
+            ## .remove
+
+            model.remove(expression, value, parentPath, dirty)
+
+            If the target key is on an object, the key will be deleted.
+            If the target key is an index in an array, the item will be spliced out.
+
+            remove data from the model
+
+                // remove model.stuff.
+                model.remove('[stuff]');
+
+            Expressions passed to remove will be evaluated by gel:
+
+                // remove all selected items.
+                model.remove('(filter [items] {item item.selected})');
+
+            You can scope paths in the expression to a parent path:
+
+                // remove the last account.
+                model.remove('(last [])', '[accounts]');
+
+        */
         remove: modelRemove,
 
         utils: {
@@ -972,6 +1038,14 @@ function newGedi(model) {
             this.set(model, false);
         },
 
+        /**
+            ## .bind
+
+            model.bind(expression, callback, parentPath)
+
+            bind a callback to change events on the model
+
+        */
         bind: setBinding,
 
         debind: removeBinding,
