@@ -420,7 +420,7 @@ function newGedi(model) {
             references = [reference],
             target = paths.resolve('[/]', path);
 
-        function triggerListeners(reference, sink) {
+        function triggerListeners(reference, bubble) {
             if (reference != undefined && reference !== null) {
                 for(var index = 0; index < reference.length; index++){
                     var callback = reference[index],
@@ -429,6 +429,10 @@ function newGedi(model) {
                         parentPath = callback.parentPath,
                         wildcardIndex = callbackBinding.indexOf(pathConstants.wildcard),
                         wildcardMatchFail;
+
+                    if(bubble && !callback.captureBubbling){
+                        continue;
+                    }
 
                     if(wildcardIndex >= 0 && getPathsInExpression(callbackBinding)[0] === callbackBinding){
 
@@ -460,10 +464,10 @@ function newGedi(model) {
                     });
                 }
 
-                if (sink) {
+                if (!bubble) {
                     for (var key in reference) {
                         if (reference.hasOwnProperty(key) && Array.isArray(reference[key])) {
-                            triggerListeners(reference[key], sink);
+                            triggerListeners(reference[key], bubble);
                         }
                     }
                 }
@@ -494,10 +498,10 @@ function newGedi(model) {
 
         while (references.length > 1) {
             reference = references.shift();
-            triggerListeners(reference);
+            triggerListeners(reference, true);
         }
 
-        triggerListeners(references.pop(), true);
+        triggerListeners(references.pop());
     }
 
     //***********************************************
@@ -537,15 +541,20 @@ function newGedi(model) {
 
         callback.references.push(path);
 
+        // Should bubble.
+        if(paths.isBubbleCapture(path)){
+            callback.captureBubbling = true;
+        }
+
         if (parentPath) {
             path = paths.resolve(paths.createRoot(), parentPath, path);
         }
 
         // Handle wildcards
 
-        var firstWildcardIndex = path.indexOf(pathConstants.wildcard);
-        if(firstWildcardIndex>=0){
-            path = path.slice(0, firstWildcardIndex);
+        if(path.indexOf(pathConstants.wildcard)>=0){
+            var parts = paths.toParts(path);
+            path = paths.create(parts.slice(0, parts.indexOf(pathConstants.wildcard)));
         }
 
         if(paths.isRoot(path)){

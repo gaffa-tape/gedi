@@ -3,7 +3,7 @@ var Gedi = require('../'),
 
 test('relative get', function(t) {
     var gedi = new Gedi({thing:{stuff:{majigger:'stuff'}}});
-    
+
     t.plan(1);
     t.equal(
         gedi.get('[majigger]', '[thing/stuff]'),
@@ -30,7 +30,7 @@ test('relative set', function(t) {
     var gedi = new Gedi();
 
     t.plan(1);
-    
+
     gedi.set('[majigger]', 'whatsit', '[thing/stuff]');
 
     t.equal(
@@ -126,6 +126,7 @@ test('up named levels set', function(t) {
         'whatsit',
         'can set [..thing/whatsit] from path [thing/stuff/majigger/foo/bar/pants]'
     );
+    t.end();
 });
 
 test('root get', function(t) {
@@ -144,7 +145,7 @@ test('root set', function(t) {
     var gedi = new Gedi();
 
     t.plan(1);
-    
+
     gedi.set('[thing/stuff/majigger]', 'stuff');
     gedi.set('[/thing/whatsits]', 'hello', '[thing/stuff/majigger]');
 
