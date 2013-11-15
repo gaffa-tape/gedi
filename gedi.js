@@ -542,7 +542,7 @@ function newGedi(model) {
         callback.references.push(path);
 
         // Should bubble.
-        if(path.slice(-2) === path.upALevel){
+        if(paths.isBubbleCapture(path)){
             callback.captureBubbling = true;
         }
 

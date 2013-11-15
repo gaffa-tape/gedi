@@ -143,3 +143,32 @@ test('bubbled bind', function(t) {
     gedi.set('[thing/stuff/majigger]', 'stuff');
     t.end();
 });
+
+test('up levels bind', function(t) {
+    var gedi = new Gedi();
+
+    t.plan(1);
+
+    gedi.bind('[thing]', function(){
+        t.fail('captured bubbled event on [thing] but shouldn\'t have');
+    });
+    gedi.bind('[thing/stuff/majigger]', function(){
+        t.pass('captured event on [thing/stuff/majigger]');
+    });
+
+    gedi.set('[thing/stuff/majigger]', 'stuff');
+    t.end();
+});
+
+test('bubbled bind', function(t) {
+    var gedi = new Gedi();
+
+    t.plan(1);
+
+    gedi.bind('[thing..]', function(){
+        t.pass('captured bubbled event on [thing]');
+    });
+
+    gedi.set('[thing/stuff/majigger]', 'stuff');
+    t.end();
+});
