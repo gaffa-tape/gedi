@@ -5,7 +5,7 @@
   "version": "0.10.0",
   "main": "gedi.js",
   "dependencies": {
-    "gedi-paths": "0.2.x",
+    "gedi-paths": "0.3.x",
     "gel-js": "0.5.x",
     "lang-js": "0.1.x",
     "spec-js": "0.0.x",
