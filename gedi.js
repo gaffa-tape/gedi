@@ -85,7 +85,9 @@ function newGedi(model) {
             if(prop && typeof prop === 'object'){
                 var refPath = paths.append(path, key);
                 if(modelReferences.has(prop)){
-                    modelReferences.get(prop)[refPath] = null;
+                    if(prop !== object){
+                        modelReferences.get(prop)[refPath] = null;
+                    }
                 }else{
                     addModelReference(refPath, prop);
                 }
@@ -415,7 +417,7 @@ function newGedi(model) {
                             }
                         }
                         if(anyRemoved){
-                            events.trigger(paths.append(parentPath));
+                            events.trigger(parentPath);
                         }
                     }else{
                         for(var key in parentObject){
