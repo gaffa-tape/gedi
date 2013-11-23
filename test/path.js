@@ -1,5 +1,5 @@
 var Gedi = require('../'),
-    test = require('tape');
+    test = require('grape');
 
 test('root path', function(t) {
     var gedi = new Gedi(),
@@ -7,7 +7,7 @@ test('root path', function(t) {
 
     t.plan(1);
     t.ok(gedi.paths.isRoot(path), 'path is root');
-    t.end();
+
 });
 
 test('absolute path', function(t) {
@@ -16,7 +16,7 @@ test('absolute path', function(t) {
 
     t.plan(1);
     t.ok(gedi.paths.isAbsolute(path), 'path is absolute');
-    t.end();
+
 });
 
 test('relative path', function(t) {
@@ -25,7 +25,7 @@ test('relative path', function(t) {
 
     t.plan(1);
     t.notOk(gedi.paths.isAbsolute(path), 'path is not absolute');
-    t.end();
+
 });
 
 test('append path', function(t) {
@@ -36,5 +36,5 @@ test('append path', function(t) {
 
     t.plan(1);
     t.equal(path, '[majigger/../stuff]', 'path append works');
-    t.end();
+
 });

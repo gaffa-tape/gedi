@@ -12,7 +12,11 @@ var Gel = require('gel-js'),
     Token = Gel.Token,
     paths = require('gedi-paths'),
     pathConstants = paths.constants,
-    createSpec = require('spec-js');
+    createSpec = require('spec-js'),
+    createEvents = require('./events'),
+    modelOpperations = require('./modelOpperations'),
+    get = modelOpperations.get,
+    set = modelOpperations.set;
 
 //Create gedi
 var gediConstructor = newGedi;
@@ -37,8 +41,9 @@ function newGedi(model) {
     // Storage for the applications model
     model = model || {};
 
-        // Storage for model event handles
-    var internalBindings = [],
+
+        // gel instance
+    var gel = new Gel(),
 
         // Storage for tracking references within the model
         modelReferences = new HybridMap(),
@@ -46,10 +51,10 @@ function newGedi(model) {
         // Storage for tracking the dirty state of the model
         dirtyModel = {},
 
-        // gel instance
-        gel,
+        PathToken = createPathToken(get, model),
 
-        PathToken = createPathToken(get, model);
+        // Storage for model event handles
+        events = createEvents(modelGet, gel, PathToken);
 
     // Add a new object who's references should be tracked.
     function addModelReference(path, object){
@@ -77,8 +82,15 @@ function newGedi(model) {
             var prop = object[key];
 
             // Faster to check again here than to create pointless paths.
-            if(prop && typeof prop === 'object' && !modelReferences.has(prop)){
-                addModelReference(paths.append(path, paths.create(key)), prop);
+            if(prop && typeof prop === 'object'){
+                var refPath = paths.append(path, key);
+                if(modelReferences.has(prop)){
+                    if(prop !== object){
+                        modelReferences.get(prop)[refPath] = null;
+                    }
+                }else{
+                    addModelReference(refPath, prop);
+                }
             }
         }
     }
@@ -128,7 +140,7 @@ function newGedi(model) {
 
         for(var path in objectReferences){
             if(path !== parentPath){
-                trigger(path);
+                events.trigger(path);
             }
         }
     }
@@ -189,8 +201,6 @@ function newGedi(model) {
     //
     //***********************************************
 
-    gel = new Gel();
-
     gel.tokenConverters.push(PathToken);
 
     gel.scope.isDirty = function(scope, args){
@@ -225,141 +235,6 @@ function newGedi(model) {
 
         return result;
     };
-
-    //***********************************************
-    //
-    //      Get
-    //
-    //***********************************************
-
-    var memoiseCache = {};
-
-    // Lots of similarities between get and set, refactor later to reuse code.
-    function get(path, model) {
-        if (!path) {
-            return model;
-        }
-
-        var memoiseObject = memoiseCache[path];
-        if(memoiseObject && memoiseObject.model === model){
-            return memoiseObject.value;
-        }
-
-        if(paths.isRoot(path)){
-            return model;
-        }
-
-        var pathParts = paths.toParts(path),
-            reference = model,
-            index = 0,
-            pathLength = pathParts.length;
-
-        if(paths.isAbsolute(path)){
-            index = 1;
-        }
-
-        for(; index < pathLength; index++){
-            var key = pathParts[index];
-
-            if (reference == null) {
-                break;
-            } else if (typeof reference[key] === "object") {
-                reference = reference[key];
-            } else {
-                reference = reference[key];
-
-                // If there are still keys in the path that have not been accessed,
-                // return undefined.
-                if(index < pathLength - 1){
-                    reference = undefined;
-                }
-                break;
-            }
-        }
-
-        memoiseCache[path] = {
-            model: model,
-            value: reference
-        };
-
-        return reference;
-    }
-
-
-    //***********************************************
-    //
-    //      Overwrite Model
-    //
-    //***********************************************
-
-    function overwriteModel(replacement, model){
-        for (var modelProp in model) {
-            delete model[modelProp];
-        }
-        for (var replacementProp in replacement) {
-            model[replacementProp] = replacement[replacementProp];
-        }
-    }
-
-
-    //***********************************************
-    //
-    //      Set
-    //
-    //***********************************************
-
-    function set(path, value, model) {
-        // passed a null or undefined path, do nothing.
-        if (!path) {
-            return;
-        }
-
-        memoiseCache = {};
-
-        // If you just pass in an object, you are overwriting the model.
-        if (typeof path === "object") {
-            value = path;
-            path = paths.createRoot();
-        }
-
-        var pathParts = paths.toParts(path),
-            index = 0,
-            pathLength = pathParts.length;
-
-        if(paths.isRoot(path)){
-            overwriteModel(value, model);
-            return;
-        }
-
-        if(paths.isAbsolute(path)){
-            index = 1;
-        }
-
-        var reference = model;
-
-        for(; index < pathLength; index++){
-            var key = pathParts[index];
-
-            // if we have hit a non-object property on the reference and we have more keys after this one
-            // make an object (or array) here and move on.
-            if ((typeof reference[key] !== "object" || reference[key] === null) && index < pathLength - 1) {
-                if (!isNaN(key)) {
-                    reference[key] = [];
-                }
-                else {
-                    reference[key] = {};
-                }
-            }
-            if (index === pathLength - 1) {
-                // if we are at the end of the line, set to the model
-                reference[key] = value;
-            }
-                //otherwise, RECURSANIZE!
-            else {
-                reference = reference[key];
-            }
-        }
-    }
 
     //***********************************************
     //
@@ -405,292 +280,6 @@ function newGedi(model) {
         }
 
         return reference;
-    }
-
-
-    //***********************************************
-    //
-    //      Trigger Binding
-    //
-    //***********************************************
-
-    function trigger(path) {
-
-        var reference = internalBindings,
-            references = [reference],
-            target = paths.resolve('[/]', path);
-
-        function triggerListeners(reference, bubble) {
-            if (reference != undefined && reference !== null) {
-                for(var index = 0; index < reference.length; index++){
-                    var callback = reference[index],
-                        callbackBinding = callback.binding,
-                        callbackBindingParts,
-                        parentPath = callback.parentPath,
-                        wildcardIndex = callbackBinding.indexOf(pathConstants.wildcard),
-                        wildcardMatchFail;
-
-                    if(bubble && !callback.captureBubbling){
-                        continue;
-                    }
-
-                    if(wildcardIndex >= 0 && getPathsInExpression(callbackBinding)[0] === callbackBinding){
-
-                        //fully resolve the callback path
-                        callbackBindingParts = paths.toParts(paths.resolve('[/]', callback.parentPath, callbackBinding));
-
-                        //null out the now not needed parent path
-                        parentPath = null;
-
-                        for(var i = 0; i < callbackBindingParts.length; i++) {
-                            var pathPart = callbackBindingParts[i];
-                            if(pathPart === pathConstants.wildcard){
-                                callbackBindingParts[i] = target[i];
-                            }else if (pathPart !== target[i]){
-                                return wildcardMatchFail = true;
-                            }
-                        }
-
-                        if(wildcardMatchFail){
-                            continue;
-                        }
-                    }
-
-                    callback({
-                        target: target,
-                        getValue: function(scope, returnAsTokens){
-                            return modelGet(callbackBinding, parentPath, scope, returnAsTokens);
-                        }
-                    });
-                }
-
-                if (!bubble) {
-                    for (var key in reference) {
-                        if (reference.hasOwnProperty(key) && Array.isArray(reference[key])) {
-                            triggerListeners(reference[key], bubble);
-                        }
-                    }
-                }
-            }
-        }
-
-        var index = 0;
-
-        if(paths.isAbsolute(path)){
-            index = 1;
-        }
-
-        var pathParts = paths.toParts(path);
-
-        for(; index < pathParts.length; index++){
-            var key = pathParts[index];
-            if (!isNaN(key) || key in arrayProto) {
-                key = "_" + key;
-            }
-
-            if (reference !== undefined && reference !== null) {
-                reference = reference[key];
-                references.push(reference);
-            }
-        }
-
-        // Top down, less likely to cause changes this way.
-
-        while (references.length > 1) {
-            reference = references.shift();
-            triggerListeners(reference, true);
-        }
-
-        triggerListeners(references.pop());
-    }
-
-    //***********************************************
-    //
-    //      Set Binding
-    //
-    //***********************************************
-
-    function setBinding(binding, callback, parentPath) {
-
-        var path,
-            reference = internalBindings;
-
-        callback.binding = callback.binding || binding;
-        callback.parentPath = parentPath;
-        if(!callback.references){
-            callback.references = [];
-        }
-
-        //If the binding has opperators in it, break them apart and set them individually.
-        if (!paths.create(binding)) {
-            var expressionPaths = getPathsInExpression(binding),
-                boundExpressions = {};
-
-            for(var i = 0; i < expressionPaths.length; i++) {
-                var path = expressionPaths[i];
-                if(!boundExpressions[path]){
-                    boundExpressions[path] = true;
-                    setBinding(path, callback, parentPath);
-                }
-            }
-
-            return;
-        }
-
-        path = binding;
-
-        callback.references.push(path);
-
-        // Should bubble.
-        if(paths.isBubbleCapture(path)){
-            callback.captureBubbling = true;
-        }
-
-        if (parentPath) {
-            path = paths.resolve(paths.createRoot(), parentPath, path);
-        }
-
-        // Handle wildcards
-
-        if(path.indexOf(pathConstants.wildcard)>=0){
-            var parts = paths.toParts(path);
-            path = paths.create(parts.slice(0, parts.indexOf(pathConstants.wildcard)));
-        }
-
-        if(paths.isRoot(path)){
-            reference.push(callback);
-            return;
-        }
-
-        var index = 0;
-
-        if(paths.isAbsolute(path)){
-            index = 1;
-        }
-
-        var pathParts = paths.toParts(path);
-
-        for(; index < pathParts.length; index++){
-            var key = pathParts[index];
-
-            //escape properties of the array with an underscore.
-            // numbers mean a binding has been set on an array index.
-            // array property bindings like length can also be set, and thats why all array properties are escaped.
-            if (!isNaN(key) || key in arrayProto) {
-                key = "_" + key;
-            }
-
-            //if we have more keys after this one
-            //make an array here and move on.
-            if (typeof reference[key] !== "object" && index < pathParts.length - 1) {
-                reference[key] = [];
-                reference = reference[key];
-            }
-            else if (index === pathParts.length - 1) {
-                // if we are at the end of the line, add the callback
-                reference[key] = reference[key] || [];
-                reference[key].push(callback);
-            }
-                //otherwise, RECURSANIZE! (ish...)
-            else {
-                reference = reference[key];
-            }
-        }
-    }
-
-
-    //***********************************************
-    //
-    //      Remove Binding
-    //
-    //***********************************************
-
-    function removeBinding(path, callback){
-        var callbacks;
-
-        if(typeof path === 'function'){
-            callback = path;
-            path = null;
-        }
-
-        var parentPath = callback ? callback.parentPath : null;
-
-        if(path == null){
-            if(callback != null && callback.references){
-                for(var i = 0; i < callback.references.length; i++) {
-                    removeBinding(callback.references[i], callback);
-                }
-            }else{
-                internalBindings = [];
-            }
-            return;
-        }
-
-        var expressionPaths = getPathsInExpression(path);
-        if(expressionPaths.length > 1){
-            for(var i = 0; i < expressionPaths.length; i++) {
-                removeBinding(expressionPaths[i], callback);
-            }
-            return;
-        }
-
-        var resolvedPathParts = paths.toParts(paths.resolve(parentPath, path)),
-            bindingPathParts = [];
-
-        for(var i = 0; i < resolvedPathParts.length; i++){
-            if(parseInt(resolvedPathParts[i]).toString() === resolvedPathParts[i]){
-                bindingPathParts[i] = '_' + resolvedPathParts[i];
-            }else{
-                bindingPathParts[i] = resolvedPathParts[i];
-            }
-        }
-
-        var escapedPath = paths.create(bindingPathParts);
-
-        if(!callback){
-            set(escapedPath, [], internalBindings);
-        }
-
-        callbacks = get(escapedPath, internalBindings);
-
-        if(!callbacks){
-            return;
-        }
-
-        for (var i = 0; i < callbacks.length; i++) {
-            if(callbacks[i] === callback){
-                callbacks.splice(i, 1);
-                return;
-            }
-        }
-    }
-
-
-    //***********************************************
-    //
-    //      Get Paths
-    //
-    //***********************************************
-    var memoisedExpressionPaths = {};
-    function getPathsInExpression(expression) {
-        var paths = [];
-
-        if(memoisedExpressionPaths[expression]){
-            return memoisedExpressionPaths[expression];
-        }
-
-        if (gel) {
-            var tokens = gel.tokenise(expression);
-            for(var index = 0; index < tokens.length; index++){
-            var token = tokens[index];
-                if(token instanceof PathToken){
-                    paths.push(token.original);
-                }
-            }
-        } else {
-            return memoisedExpressionPaths[expression] = [paths.create(expression)];
-        }
-        return memoisedExpressionPaths[expression] = paths;
     }
 
     //***********************************************
@@ -784,7 +373,7 @@ function newGedi(model) {
 
         if(!(value instanceof DeletedItem)){
             addModelReference(expression, value);
-            trigger(expression);
+            events.trigger(expression);
             triggerModelReferences(expression);
         }
 
@@ -814,7 +403,7 @@ function newGedi(model) {
 
             for(var key in parentPaths){
                 if(parentPaths.hasOwnProperty(key)){
-                    var parentPath = paths.resolve(parentPath || paths.createRoot(), paths.create(key)),
+                    var parentPath = paths.resolve(parentPath || paths.createRoot(), key),
                         parentObject = get(parentPath, model),
                         isArray = Array.isArray(parentObject);
 
@@ -828,13 +417,13 @@ function newGedi(model) {
                             }
                         }
                         if(anyRemoved){
-                            trigger(paths.append(parentPath));
+                            events.trigger(parentPath);
                         }
                     }else{
                         for(var key in parentObject){
                             if(parentObject[key] instanceof DeletedItem){
                                 delete parentObject[key];
-                                trigger(paths.append(parentPath, paths.create(key)));
+                                events.trigger(paths.append(parentPath, key));
                             }
                         }
                     }
@@ -854,9 +443,9 @@ function newGedi(model) {
 
         if(Array.isArray(parentObject)){
             //trigger one above
-            trigger(paths.resolve('[/]', paths.append(expression, paths.create(pathConstants.upALevel))));
+            events.trigger(paths.resolve(paths.createRoot(), paths.append(expression, pathConstants.upALevel)));
         }else{
-            trigger(expression);
+            events.trigger(expression);
         }
 
         removeModelReference(expression, removedItem);
@@ -1055,11 +644,11 @@ function newGedi(model) {
             bind a callback to change events on the model
 
         */
-        bind: setBinding,
+        bind: events.bind,
 
-        debind: removeBinding,
+        debind: events.debind,
 
-        trigger: trigger,
+        trigger: events.trigger,
 
         isDirty: isDirty,
 

@@ -1,5 +1,5 @@
 var Gedi = require('../'),
-    test = require('tape');
+    test = require('grape');
 
 if(typeof window !== 'undefined'){
 
@@ -16,7 +16,7 @@ if(typeof window !== 'undefined'){
             element
         );
 
-        t.end();
+
     });
 
     test('reference DOM node', function(t) {
@@ -40,7 +40,7 @@ if(typeof window !== 'undefined'){
 
         gedi.set('[element1/className]', 'thing');
 
-        t.end();
+
     });
 
 }

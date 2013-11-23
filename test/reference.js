@@ -1,5 +1,5 @@
 var Gedi = require('../'),
-    test = require('tape');
+    test = require('grape');
 
 test('reference bind', function(t) {
     var obj = {},
@@ -19,7 +19,7 @@ test('reference bind', function(t) {
 
     gedi.set('[foo/things]', 'things');
 
-    t.end();
+
 });
 
 test('removed reference bind', function(t) {
@@ -45,7 +45,7 @@ test('removed reference bind', function(t) {
 
     gedi.set('[bar/things]', 'things');
 
-    t.end();
+
 });
 
 test('late added reference bind', function(t) {
@@ -66,7 +66,7 @@ test('late added reference bind', function(t) {
 
     gedi.set('[foo/things]', 'things');
 
-    t.end();
+
 });
 
 test('recursive added reference bind', function(t) {
@@ -89,13 +89,11 @@ test('recursive added reference bind', function(t) {
     });
 
     gedi.set('[foo/things]', 'things');
-
-    t.end();
 });
 
 
 test('array reference bind', function(t) {
-    t.plan(3);
+    t.plan(2);
 
     var items = [
             {
@@ -125,8 +123,6 @@ test('array reference bind', function(t) {
     model.set('[item]', model.get('[items/2]'));
 
     model.set('[item/thing]', 'stuff');
-
-    t.end();
 });
 
 
@@ -143,5 +139,5 @@ test('recursive added reference bind', function(t) {
 
     t.pass();
 
-    t.end();
+
 });
