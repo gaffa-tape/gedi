@@ -1,5 +1,5 @@
 var Gedi = require('../'),
-    test = require('tape');
+    test = require('grape');
 
 test('basic get', function(t) {
     var gedi = new Gedi({thing:'stuff'});
@@ -72,7 +72,7 @@ test('basic remove', function(t) {
 
 test('nested remove', function(t) {
     var gedi = new Gedi({thing:{stuff:{majigger:'stuff'}}});
-    
+
     t.plan(1);
 
     gedi.remove('[thing/stuff/majigger]');
@@ -82,7 +82,7 @@ test('nested remove', function(t) {
 
 test('tree creation', function(t) {
     var gedi = new Gedi();
-    
+
     t.plan(1);
 
     gedi.set('[thing/stuff/majigger]', 'things');

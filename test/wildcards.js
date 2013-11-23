@@ -1,5 +1,5 @@
 var Gedi = require('../'),
-    test = require('tape');
+    test = require('grape');
 
 test('wildcard callbacks get triggered', function(t) {
     var gedi = new Gedi({thing:{stuff:[{a:1}]}});

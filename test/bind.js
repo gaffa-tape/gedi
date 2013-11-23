@@ -1,5 +1,5 @@
 var Gedi = require('../'),
-    test = require('tape');
+    test = require('grape');
 
 test('basic bind', function(t) {
     var gedi = new Gedi();
@@ -77,15 +77,20 @@ test('scoped bind', function(t) {
 
     // Root binding should NOT fire
     gedi.bind('[]', function(){
-        t.pass('captured [] change');
+        t.fail('captured [] change');
+    });
+
+    // Root bubble binding SHOULD fire
+    gedi.bind('[...]', function(){
+        t.pass('captured [...] change');
     });
 
     // Array binding SHOULD fire
-    gedi.bind('[thing]', function(){
-        t.pass('captured [thing] change');
+    gedi.bind('[thing...]', function(){
+        t.pass('captured [thing...] change');
     });
 
-    // child binding SHOULD fire
+    // child binding should NOT fire
     gedi.bind('[thing/4]', function(){
         t.fail('captured [thing/4] change');
     });
@@ -97,11 +102,11 @@ test('scoped bind', function(t) {
 test('remove scoped bind', function(t) {
     var gedi = new Gedi({a:1,b:2,c:3});
 
-    t.plan(2);
+    t.plan(1);
 
-    // Object binding SHOULD fire
+    // Object binding should NOT fire
     gedi.bind('[]', function(){
-        t.pass('captured [] change');
+        t.fail('captured [] change');
     });
 
     // target binding SHOULD fire
@@ -136,7 +141,7 @@ test('bubbled bind', function(t) {
 
     t.plan(1);
 
-    gedi.bind('[thing..]', function(){
+    gedi.bind('[thing...]', function(){
         t.pass('captured bubbled event on [thing]');
     });
 
@@ -165,7 +170,7 @@ test('bubbled bind', function(t) {
 
     t.plan(1);
 
-    gedi.bind('[thing..]', function(){
+    gedi.bind('[thing...]', function(){
         t.pass('captured bubbled event on [thing]');
     });
 

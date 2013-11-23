@@ -1,5 +1,5 @@
 var Gedi = require('../'),
-    test = require('tape');
+    test = require('grape');
 
 test('escaped braces', function(t) {
     var model = {},
@@ -19,7 +19,7 @@ test('escaped braces', function(t) {
 test('escaped braces resolution', function(t) {
     var model = {},
         gedi = new Gedi(model);
-    
+
     model['[]'] = {};
     model['[]'][']['] = 'things';
 
@@ -36,7 +36,7 @@ test('escaped braces resolution', function(t) {
 test('escaped escapes', function(t) {
     var model = {},
         gedi = new Gedi(model);
-    
+
     model['\\'] = 'things';
 
     t.plan(1);
@@ -47,7 +47,7 @@ test('escaped escapes', function(t) {
 test('escaped escapes resolution', function(t) {
     var model = {},
         gedi = new Gedi(model);
-    
+
     model['\\'] = {};
     model['\\']['\\'] = 'things';
 
@@ -59,7 +59,7 @@ test('escaped escapes resolution', function(t) {
 test('escaped braces and escaped escapes', function(t) {
     var model = {},
         gedi = new Gedi(model);
-    
+
     model['\\[]\\'] = 'things';
 
     t.plan(1);

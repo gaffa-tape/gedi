@@ -1,9 +1,9 @@
 var Gedi = require('../'),
-    test = require('tape');
+    test = require('grape');
 
 test('set clean', function(t) {
     var gedi = new Gedi();
-    
+
     gedi.set('[thing/stuff/majigger]', 'stuff', null, false);
 
     t.plan(1);
@@ -13,7 +13,7 @@ test('set clean', function(t) {
 
 test('set implicit dirty', function(t) {
     var gedi = new Gedi();
-    
+
     gedi.set('[thing/stuff/majigger]', 'stuff');
 
     t.plan(1);
@@ -23,7 +23,7 @@ test('set implicit dirty', function(t) {
 
 test('set explicit dirty', function(t) {
     var gedi = new Gedi();
-    
+
     gedi.set('[thing/stuff/majigger]', 'stuff', null, true);
 
     t.plan(1);
@@ -35,7 +35,7 @@ test('dirty expression', function(t) {
     var gedi = new Gedi();
 
     t.plan(2);
-   
+
     gedi.set({things:'stuff'}, false);
     t.equal(gedi.get('(isDirty)'), false, 'expression ok, model not dirty');
 
@@ -46,7 +46,7 @@ test('dirty expression', function(t) {
 
 test('dirty expression - test target', function(t) {
     var gedi = new Gedi({things:{a:'a',b:'b',c:'c'},stuff:'b',majigger:'c'});
-    
+
     gedi.set('[things/a]', 'nope', false);
     gedi.set('[things/b]', 'yerp');
 

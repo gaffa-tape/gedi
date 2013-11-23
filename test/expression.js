@@ -1,5 +1,5 @@
 var Gedi = require('../'),
-    test = require('tape');
+    test = require('grape');
 
 test('expression path resolving', function(t) {
     var gedi = new Gedi({stuff:{things:[1,2,3]}});

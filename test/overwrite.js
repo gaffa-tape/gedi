@@ -1,5 +1,5 @@
 var Gedi = require('../'),
-    test = require('tape');
+    test = require('grape');
 
 test('set root (overwrite model)', function(t) {
     var gedi = new Gedi();
@@ -39,7 +39,7 @@ test('overwrite dirty state', function(t) {
 
 test('overwrite but flag not dirty', function(t) {
     var gedi = new Gedi();
-    
+
     gedi.set({things:'stuff'}, false);
 
     t.plan(1);

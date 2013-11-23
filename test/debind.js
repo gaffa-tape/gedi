@@ -1,15 +1,15 @@
 var Gedi = require('../'),
-    test = require('tape');
+    test = require('grape');
 
 test('debind all', function(t) {
     var model = {},
-        gedi = new Gedi(model);       
-    
+        gedi = new Gedi(model);
+
     t.plan(1);
     gedi.bind('[things]', function() {
         t.pass('captured change of [things]');
     });
-    
+
     gedi.set('[things]', 'stuff');
     gedi.debind();
     gedi.set('[things]', 'majigger');
@@ -24,11 +24,11 @@ test('debind callback', function(t) {
         };
 
     t.plan(2);
-        
+
     gedi.bind('[things]', handleChange);
-    gedi.bind('[]', handleChange);
+    gedi.bind('[...]', handleChange);
     gedi.set('[things]', 'stuff');
-    
+
     gedi.debind(handleChange);
     gedi.set('[things]', 'majigger');
     t.end();
@@ -39,7 +39,7 @@ test('debind path', function(t) {
         gedi = new Gedi(model);
 
     t.plan(2);
-        
+
     gedi.bind('[things]', function() {
         t.pass('received change 1');
     });
@@ -49,8 +49,8 @@ test('debind path', function(t) {
     });
 
     gedi.set('[things]', 'stuff');
-    
-    gedi.debind('[things]');   
+
+    gedi.debind('[things]');
     gedi.set('[things]', 'majigger');
     t.end();
 });
@@ -61,13 +61,13 @@ test('debind callback at path', function(t) {
         callback = function() {
             t.pass('received change');
         };
-        
+
     t.plan(3);
 
     gedi.bind('[things]', callback);
-    gedi.bind('[]', callback);   
+    gedi.bind('[...]', callback);
     gedi.set('[things]', 'stuff');
-    
+
     gedi.debind('[things]', callback);
     gedi.set('[things]', 'majigger');
     t.end();
@@ -79,11 +79,11 @@ test('debind expression', function(t) {
         callback = function() {
             t.pass('received change');
         };
-        
-    t.plan(1);    
+
+    t.plan(1);
     gedi.bind('(concat [things][stuff])', callback);
     gedi.set('[things]', 'stuff');
-    
+
     gedi.debind('(concat [things][things])', callback);
     gedi.set('[things]', 'majigger');
     t.end();
@@ -96,10 +96,10 @@ test('debind expression by callback', function(t) {
             t.pass('received change');
         };
 
-    t.plan(1);        
-    gedi.bind('(concat [things][stuff])', callback);  
+    t.plan(1);
+    gedi.bind('(concat [things][stuff])', callback);
     gedi.set('[things]', 'stuff');
-    
+
     gedi.debind(callback);
     gedi.set('[things]', 'majigger');
     gedi.set('[things]', 'whatsits');
@@ -112,11 +112,11 @@ test('debind relative expressions by callback', function(t) {
         callback = function() {
             t.pass('received change');
         };
-    
+
     t.plan(1);
     gedi.bind('(concat [a][b])', callback, '[thing]');
     gedi.set('[thing/a]', 'stuff');
-    
+
     gedi.debind(callback);
     gedi.set('[thing/b]', 'stuff');
     gedi.set('[thing/c]', 'stuff');
@@ -133,12 +133,12 @@ test('debind relative named all', function(t) {
             }
         },
         gedi = new Gedi(model);
-    
+
     t.plan(1);
     gedi.bind('[..things/whatsits]', function() {
         t.pass('captured change of [..things/whatsits]');
     },'[things/stuff/majigger]');
-    
+
     gedi.set('[things/whatsits]', 'stuff');
     gedi.debind();
     gedi.set('[things/whatsits]', 'majigger');
@@ -155,12 +155,12 @@ test('debind relative named keyed all', function(t) {
             }]
         },
         gedi = new Gedi(model);
-    
+
     t.plan(1);
     gedi.bind('[..things/#/whatsits]', function() {
         t.pass('captured change of [..things/#/whatsits]');
     },'[things/0/stuff/majigger]');
-    
+
     gedi.set('[things/0/whatsits]', 'stuff');
     gedi.debind();
     gedi.set('[things/0/whatsits]', 'majigger');

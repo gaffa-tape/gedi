@@ -1,5 +1,5 @@
 var Gedi = require('../'),
-    test = require('tape');
+    test = require('grape');
 
 test('reference bind', function(t) {
     var obj = {},
@@ -95,7 +95,7 @@ test('recursive added reference bind', function(t) {
 
 
 test('array reference bind', function(t) {
-    t.plan(3);
+    t.plan(2);
 
     var items = [
             {

@@ -1,5 +1,5 @@
 var Gedi = require('../'),
-    test = require('tape');
+    test = require('grape');
 
 test('relative get', function(t) {
     var gedi = new Gedi({thing:{stuff:{majigger:'stuff'}}});
