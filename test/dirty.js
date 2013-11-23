@@ -8,7 +8,7 @@ test('set clean', function(t) {
 
     t.plan(1);
     t.notOk(gedi.isDirty('[thing/stuff/majigger]'), 'model is clean');
-    t.end();
+
 });
 
 test('set implicit dirty', function(t) {
@@ -18,7 +18,7 @@ test('set implicit dirty', function(t) {
 
     t.plan(1);
     t.ok(gedi.isDirty('[thing/stuff/majigger]'), 'model dirty as expected');
-    t.end();
+
 });
 
 test('set explicit dirty', function(t) {
@@ -28,7 +28,7 @@ test('set explicit dirty', function(t) {
 
     t.plan(1);
     t.ok(gedi.isDirty('[thing/stuff/majigger]'), 'model dirty as expected');
-    t.end();
+
 });
 
 test('dirty expression', function(t) {
@@ -41,7 +41,7 @@ test('dirty expression', function(t) {
 
     gedi.set({things:'stuff'});
     t.equal(gedi.get('(isDirty)'), true, 'expression ok, model dirty');
-    t.end();
+
 });
 
 test('dirty expression - test target', function(t) {
@@ -63,7 +63,7 @@ test('dirty expression - test target', function(t) {
         true,
         'expression ok, [things/b] dirty'
     );
-    t.end();
+
 });
 
 test('get all dirty', function(t) {
@@ -76,7 +76,7 @@ test('get all dirty', function(t) {
         gedi.get('(getAllDirty).things'),
         'things not in the list of dirty objects'
     );
-    t.end();
+
 });
 
 test('get all dirty - multiple changes', function(t) {
@@ -92,5 +92,5 @@ test('get all dirty - multiple changes', function(t) {
         { b: 'yerp' },
         'getAllDirty expression resolved ok'
     );
-    t.end();
+
 });

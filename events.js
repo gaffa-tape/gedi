@@ -43,6 +43,12 @@ module.exports = function(modelGet, gel, PathToken){
     function setBinding(path, details){
         details.captureBubbling = paths.isBubbleCapture(path);
 
+        // Handle wildcards
+        if(path.indexOf(pathConstants.wildcard)>=0){
+            var parts = paths.toParts(path);
+            path = paths.create(parts.slice(0, parts.indexOf(pathConstants.wildcard)));
+        }
+
         var resolvedPath = paths.resolve(details.parentPath, path),
             reference = get(resolvedPath, modelBindings) || {},
             referenceDetails = modelBindingDetails.get(reference),
@@ -59,7 +65,6 @@ module.exports = function(modelGet, gel, PathToken){
         }
 
         callbackReferences.push(resolvedPath);
-
         referenceDetails.push(details);
 
         set(resolvedPath, reference, modelBindings);
@@ -89,11 +94,36 @@ module.exports = function(modelGet, gel, PathToken){
 
         // If the binding is a simple path, skip the more complex
         // expression path binding.
-        if (paths.create(path)) {
+        if (paths.is(path)) {
             return setBinding(path, details);
         }
 
         bindExpression(path, details);
+    }
+
+    function matchWildcardPath(binding, target, parentPath){
+        if(
+            binding.indexOf(pathConstants.wildcard) >= 0 &&
+            getPathsInExpression(binding)[0] === binding
+        ){
+            //fully resolve the callback path
+            var wildcardParts = paths.toParts(paths.resolve('[/]', parentPath, binding)),
+                targetParts = paths.toParts(target),
+                wildcardMatchFail;
+
+            for(var i = 0; i < wildcardParts.length; i++) {
+                var pathPart = wildcardParts[i];
+                if(pathPart === pathConstants.wildcard){
+                    wildcardParts[i] = targetParts[i];
+                }else if (pathPart !== targetParts[i]){
+                    return;
+                }
+            }
+
+            if(!wildcardMatchFail){
+                return paths.create(wildcardParts);
+            }
+        }
     }
 
     function triggerPath(path, target, type){
@@ -103,18 +133,19 @@ module.exports = function(modelGet, gel, PathToken){
         if(referenceDetails){
             for(var i = 0; i < referenceDetails.length; i++) {
                 var details = referenceDetails[i],
-                    binding = details.binding;
+                    binding = details.binding,
+                    wildcardPath = matchWildcardPath(binding, target, details.parentPath);
 
-                if(type === 'bubble' && !details.captureBubbling){
+                if(!wildcardPath && type === 'bubble' && !details.captureBubbling){
                     continue;
                 }
 
-                // ToDo: wildcards
-
                 details.callback({
                     target: target,
+                    binding: wildcardPath || details.binding,
+                    type: type,
                     getValue: function(scope, returnAsTokens){
-                        return modelGet(details.binding, details.parentPath, scope, returnAsTokens);
+                        return modelGet(wildcardPath || details.binding, details.parentPath, scope, returnAsTokens);
                     }
                 });
             };
@@ -128,6 +159,9 @@ module.exports = function(modelGet, gel, PathToken){
     }
 
     function trigger(path, type){
+        // resolve path to root
+        path = paths.resolve(paths.createRoot(), path);
+
         var targetReference = get(path, modelBindings),
             pathParts = paths.toParts(path),
             lastKey = pathParts[pathParts.length-1],
@@ -135,12 +169,16 @@ module.exports = function(modelGet, gel, PathToken){
 
         if(!type){
             for(var i = 0; i < pathParts.length; i++){
-                if(i === pathParts.length -1 && !isNaN(pathParts[i])){
-                    triggerPath(currentBubblePath, path, 'arrayKey');
-                }else{
-                    triggerPath(currentBubblePath, path, 'bubble');
-                }
+                var bubbleType;
+
                 currentBubblePath = paths.append(currentBubblePath, pathParts[i]);
+
+                if(i === pathParts.length -2 && !isNaN(pathParts[i+1])){
+                    bubbleType = 'arrayItem';
+                }else{
+                    bubbleType = 'bubble';
+                }
+                triggerPath(currentBubblePath, path, bubbleType);
             }
         }
 
@@ -178,6 +216,9 @@ module.exports = function(modelGet, gel, PathToken){
             }
             return;
         }
+
+        // resolve path to root
+        path = paths.resolve(paths.createRoot(), path);
 
         var targetReference = get(path, modelBindings),
             referenceDetails = modelBindingDetails.get(targetReference);

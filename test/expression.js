@@ -23,7 +23,7 @@ test('expression path resolving', function(t) {
         3,
         '[/stuff/things] contains 3 items'
     );
-    t.end();
+
 });
 
 test('expression path setting', function(t) {
@@ -39,7 +39,7 @@ test('expression path setting', function(t) {
         'set via dot notation'
     );
 
-    t.end();
+
 });
 
 test('deep expression path setting', function(t) {
@@ -55,7 +55,7 @@ test('deep expression path setting', function(t) {
         'set via multiple dot notations'
     );
 
-    t.end();
+
 });
 
 test('expression multiple path setting', function(t) {
@@ -71,7 +71,7 @@ test('expression multiple path setting', function(t) {
         'set via filter'
     );
 
-    t.end();
+
 });
 
 test('expression multiple path setting relative', function(t) {
@@ -87,7 +87,7 @@ test('expression multiple path setting relative', function(t) {
         'set via filter'
     );
 
-    t.end();
+
 });
 
 test('complex expression setting', function(t) {
@@ -103,7 +103,7 @@ test('complex expression setting', function(t) {
         'set via sort and slice'
     );
 
-    t.end();
+
 });
 
 test('complex expression setting 2', function(t) {
@@ -119,7 +119,7 @@ test('complex expression setting 2', function(t) {
         'set via last'
     );
 
-    t.end();
+
 });
 
 test('complex expression setting 3', function(t) {
@@ -135,7 +135,7 @@ test('complex expression setting 3', function(t) {
         'set via anon function'
     );
 
-    t.end();
+
 });
 
 test('complex expression setting 4', function(t) {
@@ -151,7 +151,7 @@ test('complex expression setting 4', function(t) {
         'set via anon function'
     );
 
-    t.end();
+
 });
 
 test('complex expression setting 5', function(t) {
@@ -177,7 +177,7 @@ test('complex expression setting 5', function(t) {
         'set via map'
     );
 
-    t.end();
+
 });
 
 test('complex expression setting 6', function(t) {
@@ -198,7 +198,7 @@ test('complex expression setting 6', function(t) {
         'set stuff via concat'
     );
 
-    t.end();
+
 });
 
 test('complex expression setting 7', function(t) {
@@ -214,7 +214,7 @@ test('complex expression setting 7', function(t) {
         'set via getValue'
     );
 
-    t.end();
+
 });
 
 test('expression path removing', function(t) {
@@ -230,7 +230,7 @@ test('expression path removing', function(t) {
         'remove via dot notation'
     );
 
-    t.end();
+
 });
 
 test('deep expression path removing', function(t) {
@@ -246,7 +246,7 @@ test('deep expression path removing', function(t) {
         'remove via multiple dot notations'
     );
 
-    t.end();
+
 });
 
 test('expression multiple path removing', function(t) {
@@ -262,7 +262,7 @@ test('expression multiple path removing', function(t) {
         'remove via filter'
     );
 
-    t.end();
+
 });
 
 test('complex expression removing', function(t) {
@@ -278,7 +278,7 @@ test('complex expression removing', function(t) {
         'remove via sort and slice'
     );
 
-    t.end();
+
 });
 
 test('complex expression removing 2', function(t) {
@@ -294,7 +294,7 @@ test('complex expression removing 2', function(t) {
         'remove via last'
     );
 
-    t.end();
+
 });
 
 test('set explicit dirty expression', function(t) {
@@ -305,5 +305,5 @@ test('set explicit dirty expression', function(t) {
     t.plan(2);
     t.ok(gedi.isDirty('[stuff/4]'), 'model dirty as expected');
     t.ok(!gedi.isDirty('[stuff/1]'), 'model not dirty as expected');
-    t.end();
+
 });

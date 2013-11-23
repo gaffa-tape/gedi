@@ -23,7 +23,7 @@ test('bind bubbled event.getValue()', function(t) {
     });
 
     gedi.set('[thing/stuff/majigger]', 20);
-    t.end();
+
 });
 
 test('bind bubbled event.getValue() remove', function(t) {
@@ -44,7 +44,7 @@ test('bind bubbled event.getValue() remove', function(t) {
     });
 
     gedi.remove('[thing/stuff/majigger]');
-    t.end();
+
 });
 
 test('bind expression event.value', function(t) {
@@ -61,7 +61,7 @@ test('bind expression event.value', function(t) {
     });
 
     gedi.set('[thing/stuff/majigger]', 20);
-    t.end();
+
 });
 
 test('bind expression event.getValue() complex', function(t) {
@@ -89,5 +89,5 @@ test('bind expression event.getValue() complex', function(t) {
     );
 
     gedi.set('[thing/stuff/majigger/3]', 'hello');
-    t.end();
+
 });

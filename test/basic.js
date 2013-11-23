@@ -16,7 +16,7 @@ test('basic get', function(t) {
         gedi.get('[thing/stuff]'),
         'deep get returning valid result on shallow object'
     );
-    t.end();
+
 });
 
 test('nested gets', function(t) {
@@ -28,7 +28,7 @@ test('nested gets', function(t) {
         'stuff',
         'found [thing/stuff/majigger]'
     );
-    t.end();
+
 });
 
 test('basic set', function(t) {
@@ -42,7 +42,7 @@ test('basic set', function(t) {
         'stuff',
         'successfully set [thing]'
     );
-    t.end();
+
 });
 
 test('nested set', function(t) {
@@ -57,7 +57,7 @@ test('nested set', function(t) {
         'things',
         'successfully set [thing/stuff/majigger]'
     );
-    t.end();
+
 });
 
 test('basic remove', function(t) {
@@ -67,7 +67,7 @@ test('basic remove', function(t) {
 
     gedi.remove('[thing]');
     t.notOk(gedi.get('[thing]'), 'removed [thing]');
-    t.end();
+
 });
 
 test('nested remove', function(t) {
@@ -77,7 +77,7 @@ test('nested remove', function(t) {
 
     gedi.remove('[thing/stuff/majigger]');
     t.notOk(gedi.get('[thing/stuff/majigger]'), 'removed [thing/stuff/majigger]');
-    t.end();
+
 });
 
 test('tree creation', function(t) {
@@ -91,5 +91,5 @@ test('tree creation', function(t) {
         'things',
         'created full tree [thing/stuff/majigger]'
     );
-    t.end();
+
 });

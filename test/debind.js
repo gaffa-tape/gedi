@@ -13,7 +13,7 @@ test('debind all', function(t) {
     gedi.set('[things]', 'stuff');
     gedi.debind();
     gedi.set('[things]', 'majigger');
-    t.end();
+
 });
 
 test('debind callback', function(t) {
@@ -31,7 +31,7 @@ test('debind callback', function(t) {
 
     gedi.debind(handleChange);
     gedi.set('[things]', 'majigger');
-    t.end();
+
 });
 
 test('debind path', function(t) {
@@ -52,7 +52,7 @@ test('debind path', function(t) {
 
     gedi.debind('[things]');
     gedi.set('[things]', 'majigger');
-    t.end();
+
 });
 
 test('debind callback at path', function(t) {
@@ -70,7 +70,7 @@ test('debind callback at path', function(t) {
 
     gedi.debind('[things]', callback);
     gedi.set('[things]', 'majigger');
-    t.end();
+
 });
 
 test('debind expression', function(t) {
@@ -86,7 +86,7 @@ test('debind expression', function(t) {
 
     gedi.debind('(concat [things][things])', callback);
     gedi.set('[things]', 'majigger');
-    t.end();
+
 });
 
 test('debind expression by callback', function(t) {
@@ -103,7 +103,7 @@ test('debind expression by callback', function(t) {
     gedi.debind(callback);
     gedi.set('[things]', 'majigger');
     gedi.set('[things]', 'whatsits');
-    t.end();
+
 });
 
 test('debind relative expressions by callback', function(t) {
@@ -120,7 +120,7 @@ test('debind relative expressions by callback', function(t) {
     gedi.debind(callback);
     gedi.set('[thing/b]', 'stuff');
     gedi.set('[thing/c]', 'stuff');
-    t.end();
+
 });
 
 test('debind relative named all', function(t) {
@@ -142,7 +142,7 @@ test('debind relative named all', function(t) {
     gedi.set('[things/whatsits]', 'stuff');
     gedi.debind();
     gedi.set('[things/whatsits]', 'majigger');
-    t.end();
+
 });
 
 test('debind relative named keyed all', function(t) {
@@ -164,5 +164,5 @@ test('debind relative named keyed all', function(t) {
     gedi.set('[things/0/whatsits]', 'stuff');
     gedi.debind();
     gedi.set('[things/0/whatsits]', 'majigger');
-    t.end();
+
 });
