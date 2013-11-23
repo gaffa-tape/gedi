@@ -6,11 +6,11 @@ test('bind bubbled event.getValue()', function(t) {
 
     t.plan(2);
 
-    gedi.bind('[thing]', function(evt){
+    gedi.bind('[thing...]', function(evt){
         t.deepEqual(
             evt.getValue(),
             { stuff: { majigger: 20 } },
-            'captured [thing] change, getValue() matches expected'
+            'captured [thing...] change, getValue() matches expected'
         );
     });
 
@@ -31,11 +31,11 @@ test('bind bubbled event.getValue() remove', function(t) {
 
     t.plan(2);
 
-    gedi.bind('[thing]', function(evt){
+    gedi.bind('[thing...]', function(evt){
         t.deepEqual(
             evt.getValue(),
             { stuff: {} },
-            'captured [thing] change, getValue() matches expected'
+            'captured [thing...] change, getValue() matches expected'
         );
     });
 
@@ -78,12 +78,12 @@ test('bind expression event.getValue() complex', function(t) {
     );
 
     gedi.bind(
-        '[thing/stuff]',
+        '[thing/stuff...]',
         function(evt) {
             t.deepEqual(
                 evt.getValue(),
                 { majigger: [ true, false, true, 'hello' ]},
-                'captured [thing/stuff] update, value matched expected'
+                'captured [thing/stuff...] update, value matched expected'
             );
         }
     );

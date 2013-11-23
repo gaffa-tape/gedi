@@ -40,7 +40,32 @@ module.exports = function(modelGet, gel, PathToken){
         return memoisedExpressionPaths[expression] = paths;
     }
 
-    function bindExpression(binding, callback, parentPath){
+    function setBinding(path, details){
+        details.captureBubbling = paths.isBubbleCapture(path);
+
+        var resolvedPath = paths.resolve(details.parentPath, path),
+            reference = get(resolvedPath, modelBindings) || {},
+            referenceDetails = modelBindingDetails.get(reference),
+            callbackReferences = callbackReferenceDetails.get(details.callback);
+
+        if(!referenceDetails){
+            referenceDetails = [];
+            modelBindingDetails.set(reference, referenceDetails);
+        }
+
+        if(!callbackReferences){
+            callbackReferences = [];
+            callbackReferenceDetails.set(details.callback, callbackReferences);
+        }
+
+        callbackReferences.push(resolvedPath);
+
+        referenceDetails.push(details);
+
+        set(resolvedPath, reference, modelBindings);
+    }
+
+    function bindExpression(binding, details){
         var expressionPaths = getPathsInExpression(binding),
             boundExpressions = {};
 
@@ -48,45 +73,27 @@ module.exports = function(modelGet, gel, PathToken){
             var path = expressionPaths[i];
             if(!boundExpressions[path]){
                 boundExpressions[path] = true;
-                bind(path, callback, parentPath);
+                setBinding(path, details);
             }
         }
     }
 
-    function bind(path, callback, parentPath){
+    function bind(path, callback, parentPath, binding){
         parentPath = parentPath || paths.create();
 
-        var bindingDetails = {
-            binding: path,
+        var details = {
+            binding: binding || path,
             callback: callback,
             parentPath: parentPath
         };
 
-        //If the binding has opperators in it, break them apart and set them individually.
-        if (!paths.create(path)) {
-            return bindExpression(path, callback, parentPath);
+        // If the binding is a simple path, skip the more complex
+        // expression path binding.
+        if (paths.create(path)) {
+            return setBinding(path, details);
         }
 
-        // by this stage path will be a simple path
-
-        var callbackReferences = callbackReferenceDetails.get(callback) || [];
-
-        callbackReferences.push(path);
-
-        callbackReferenceDetails.set(callback, callbackReferences);
-
-
-        bindingDetails.captureBubbling = paths.isBubbleCapture(path);
-
-        var resolvedPath = paths.resolve(parentPath, path),
-            reference = get(resolvedPath, modelBindings) || {},
-            referenceDetails = modelBindingDetails.get(reference) || [];
-
-        modelBindingDetails.set(reference, referenceDetails);
-
-        referenceDetails.push(bindingDetails);
-
-        set(resolvedPath, reference, modelBindings);
+        bindExpression(path, details);
     }
 
     function triggerPath(path, target, type){
@@ -163,8 +170,8 @@ module.exports = function(modelGet, gel, PathToken){
         if(path == null){
             var references = callbackReferenceDetails.get(callback);
             if(references){
-                for(var i = 0; i < references.length; i++) {
-                    debindExpression(references[i], callback);
+                while(references.length){
+                    debindExpression(references.pop(), callback);
                 }
             }else{
                 resetEvents();

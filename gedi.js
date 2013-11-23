@@ -82,8 +82,13 @@ function newGedi(model) {
             var prop = object[key];
 
             // Faster to check again here than to create pointless paths.
-            if(prop && typeof prop === 'object' && !modelReferences.has(prop)){
-                addModelReference(paths.append(path, paths.create(key)), prop);
+            if(prop && typeof prop === 'object'){
+                var refPath = paths.append(path, key);
+                if(modelReferences.has(prop)){
+                    modelReferences.get(prop)[refPath] = null;
+                }else{
+                    addModelReference(refPath, prop);
+                }
             }
         }
     }
@@ -396,7 +401,7 @@ function newGedi(model) {
 
             for(var key in parentPaths){
                 if(parentPaths.hasOwnProperty(key)){
-                    var parentPath = paths.resolve(parentPath || paths.createRoot(), paths.create(key)),
+                    var parentPath = paths.resolve(parentPath || paths.createRoot(), key),
                         parentObject = get(parentPath, model),
                         isArray = Array.isArray(parentObject);
 
@@ -416,7 +421,7 @@ function newGedi(model) {
                         for(var key in parentObject){
                             if(parentObject[key] instanceof DeletedItem){
                                 delete parentObject[key];
-                                events.trigger(paths.append(parentPath, paths.create(key)));
+                                events.trigger(paths.append(parentPath, key));
                             }
                         }
                     }
@@ -436,7 +441,7 @@ function newGedi(model) {
 
         if(Array.isArray(parentObject)){
             //trigger one above
-            events.trigger(paths.resolve('[/]', paths.append(expression, paths.create(pathConstants.upALevel))));
+            events.trigger(paths.resolve(paths.createRoot(), paths.append(expression, pathConstants.upALevel)));
         }else{
             events.trigger(expression);
         }
