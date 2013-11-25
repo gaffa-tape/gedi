@@ -93,7 +93,7 @@ test('recursive added reference bind', function(t) {
 
 
 test('array reference bind', function(t) {
-    t.plan(2);
+    t.plan(3);
 
     var items = [
             {

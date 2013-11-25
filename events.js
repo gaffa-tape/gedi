@@ -41,8 +41,6 @@ module.exports = function(modelGet, gel, PathToken){
     }
 
     function setBinding(path, details){
-        details.captureBubbling = paths.isBubbleCapture(path);
-
         // Handle wildcards
         if(path.indexOf(pathConstants.wildcard)>=0){
             var parts = paths.toParts(path);
@@ -108,25 +106,28 @@ module.exports = function(modelGet, gel, PathToken){
         ){
             //fully resolve the callback path
             var wildcardParts = paths.toParts(paths.resolve('[/]', parentPath, binding)),
-                targetParts = paths.toParts(target),
-                wildcardMatchFail;
+                targetParts = paths.toParts(target);
 
             for(var i = 0; i < wildcardParts.length; i++) {
                 var pathPart = wildcardParts[i];
                 if(pathPart === pathConstants.wildcard){
                     wildcardParts[i] = targetParts[i];
                 }else if (pathPart !== targetParts[i]){
-                    return;
+                    return false;
                 }
             }
 
-            if(!wildcardMatchFail){
-                return paths.create(wildcardParts);
-            }
+            return paths.create(wildcardParts);
         }
     }
 
-    function triggerPath(path, target, type){
+    function createGetValue(expression, parentPath){
+        return function(scope, returnAsTokens){
+            return modelGet(expression, parentPath, scope, returnAsTokens);
+        }
+    }
+
+    function triggerPath(path, target, captureType){
         var targetReference = get(path, modelBindings),
             referenceDetails = modelBindingDetails.get(targetReference);
 
@@ -136,29 +137,29 @@ module.exports = function(modelGet, gel, PathToken){
                     binding = details.binding,
                     wildcardPath = matchWildcardPath(binding, target, details.parentPath);
 
-                if(!wildcardPath && type === 'bubble' && !details.captureBubbling){
+                // binding had wildcards but
+                // did not match the current target
+                if(wildcardPath === false){
                     continue;
                 }
 
                 details.callback({
                     target: target,
                     binding: wildcardPath || details.binding,
-                    type: type,
-                    getValue: function(scope, returnAsTokens){
-                        return modelGet(wildcardPath || details.binding, details.parentPath, scope, returnAsTokens);
-                    }
+                    captureType: captureType,
+                    getValue: createGetValue(wildcardPath || details.binding, details.parentPath)
                 });
             };
         }
 
-        if(!type || type === 'sink'){
+        if(captureType === 'target' || captureType === 'sink'){
             for(var key in targetReference){
                 triggerPath(paths.append(path, key), path, 'sink');
             }
         }
     }
 
-    function trigger(path, type){
+    function trigger(path){
         // resolve path to root
         path = paths.resolve(paths.createRoot(), path);
 
@@ -167,22 +168,18 @@ module.exports = function(modelGet, gel, PathToken){
             lastKey = pathParts[pathParts.length-1],
             currentBubblePath = paths.create();
 
-        if(!type){
-            for(var i = 0; i < pathParts.length; i++){
-                var bubbleType;
+        for(var i = 0; i < pathParts.length; i++){
+            var captureType = 'bubble';
 
-                currentBubblePath = paths.append(currentBubblePath, pathParts[i]);
+            currentBubblePath = paths.append(currentBubblePath, pathParts[i]);
 
-                if(i === pathParts.length -2 && !isNaN(pathParts[i+1])){
-                    bubbleType = 'arrayItem';
-                }else{
-                    bubbleType = 'bubble';
-                }
-                triggerPath(currentBubblePath, path, bubbleType);
+            if(i === pathParts.length -2 && !isNaN(pathParts[i+1])){
+                captureType = 'arrayItem';
+            }else if(i === pathParts.length -1){
+                captureType = 'target';
             }
+            triggerPath(currentBubblePath, path, captureType);
         }
-
-        triggerPath(path, path, type);
     }
 
     function debindExpression(binding, callback){

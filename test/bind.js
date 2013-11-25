@@ -75,19 +75,14 @@ test('scoped bind', function(t) {
 
     t.plan(2);
 
-    // Root binding should NOT fire
-    gedi.bind('[]', function(){
-        t.fail('captured [] change');
-    });
-
     // Root bubble binding SHOULD fire
-    gedi.bind('[...]', function(){
-        t.pass('captured [...] change');
+    gedi.bind('[]', function(){
+        t.pass('captured [] change');
     });
 
     // Array binding SHOULD fire
-    gedi.bind('[thing...]', function(){
-        t.pass('captured [thing...] change');
+    gedi.bind('[thing]', function(){
+        t.pass('captured [thing] change');
     });
 
     // child binding should NOT fire
@@ -102,11 +97,11 @@ test('scoped bind', function(t) {
 test('remove scoped bind', function(t) {
     var gedi = new Gedi({a:1,b:2,c:3});
 
-    t.plan(1);
+    t.plan(2);
 
-    // Object binding should NOT fire
+    // Object binding SHOULD fire
     gedi.bind('[]', function(){
-        t.fail('captured [] change');
+        t.pass('captured [] change');
     });
 
     // target binding SHOULD fire
@@ -123,57 +118,58 @@ test('remove scoped bind', function(t) {
 
 });
 
-test('up levels bind', function(t) {
-    var gedi = new Gedi();
-
-    t.plan(0);
-
-    gedi.bind('[thing]', function(){
-        t.fail('captured bubbled event on [thing] but shouldn\'t have');
-    });
-
-    gedi.set('[thing/stuff/majigger]', 'stuff');
-
-});
-
 test('bubbled bind', function(t) {
     var gedi = new Gedi();
 
-    t.plan(1);
+    t.plan(2);
 
-    gedi.bind('[thing...]', function(){
-        t.pass('captured bubbled event on [thing]');
+    gedi.bind('[thing]', function(event){
+        t.pass('captured event on [thing]');
+        t.equal(event.captureType, 'bubble', 'Event capture type was "bubble"');
     });
 
     gedi.set('[thing/stuff/majigger]', 'stuff');
 
 });
 
-test('up levels bind', function(t) {
+test('target bind', function(t) {
     var gedi = new Gedi();
 
-    t.plan(1);
+    t.plan(2);
 
-    gedi.bind('[thing]', function(){
-        t.fail('captured bubbled event on [thing] but shouldn\'t have');
-    });
-    gedi.bind('[thing/stuff/majigger]', function(){
+    gedi.bind('[thing/stuff/majigger]', function(event){
         t.pass('captured event on [thing/stuff/majigger]');
+        t.equal(event.captureType, 'target', 'Event capture type was "target"');
     });
 
     gedi.set('[thing/stuff/majigger]', 'stuff');
 
 });
 
-test('bubbled bind', function(t) {
+test('sink bind', function(t) {
     var gedi = new Gedi();
 
-    t.plan(1);
+    t.plan(2);
 
-    gedi.bind('[thing...]', function(){
-        t.pass('captured bubbled event on [thing]');
+    gedi.bind('[thing/stuff/majigger]', function(event){
+        t.pass('captured event on [thing/stuff/majigger]');
+        t.equal(event.captureType, 'sink', 'Event capture type was "sink"');
     });
 
-    gedi.set('[thing/stuff/majigger]', 'stuff');
+    gedi.set('[thing]', {stuff:{majigger:1}});
+
+});
+
+test('ignored sink bind', function(t) {
+    var gedi = new Gedi();
+
+    t.plan(2);
+
+    gedi.bind('[thing/stuff/majigger]', function(event){
+        t.pass('captured event on [thing/stuff/majigger]');
+        t.equal(event.captureType, 'sink', 'Event capture type was "sink"');
+    });
+
+    gedi.set('[thing]', 1);
 
 });
