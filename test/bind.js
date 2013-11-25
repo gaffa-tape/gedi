@@ -75,19 +75,14 @@ test('scoped bind', function(t) {
 
     t.plan(2);
 
-    // Root binding should NOT fire
-    gedi.bind('[]', function(){
-        t.fail('captured [] change');
-    });
-
     // Root bubble binding SHOULD fire
-    gedi.bind('[...]', function(){
-        t.pass('captured [...] change');
+    gedi.bind('[]', function(){
+        t.pass('captured [] change');
     });
 
     // Array binding SHOULD fire
-    gedi.bind('[thing...]', function(){
-        t.pass('captured [thing...] change');
+    gedi.bind('[thing]', function(){
+        t.pass('captured [thing] change');
     });
 
     // child binding should NOT fire
@@ -170,7 +165,7 @@ test('bubbled bind', function(t) {
 
     t.plan(1);
 
-    gedi.bind('[thing...]', function(){
+    gedi.bind('[thing]', function(){
         t.pass('captured bubbled event on [thing]');
     });
 

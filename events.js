@@ -41,8 +41,6 @@ module.exports = function(modelGet, gel, PathToken){
     }
 
     function setBinding(path, details){
-        details.captureBubbling = paths.isBubbleCapture(path);
-
         // Handle wildcards
         if(path.indexOf(pathConstants.wildcard)>=0){
             var parts = paths.toParts(path);
@@ -135,10 +133,6 @@ module.exports = function(modelGet, gel, PathToken){
                 var details = referenceDetails[i],
                     binding = details.binding,
                     wildcardPath = matchWildcardPath(binding, target, details.parentPath);
-
-                if(!wildcardPath && type === 'bubble' && !details.captureBubbling){
-                    continue;
-                }
 
                 details.callback({
                     target: target,
