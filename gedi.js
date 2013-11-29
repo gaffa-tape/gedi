@@ -646,12 +646,44 @@ function newGedi(model) {
         */
         bind: events.bind,
 
+        /**
+            ## .debind
+
+            model.debind(expression, callback)
+
+            debind a callback
+
+        */
         debind: events.debind,
 
+        /**
+            ## .trigger
+
+            model.trigger(path)
+
+            trigger events for a path
+
+        */
         trigger: events.trigger,
 
+        /**
+            ## .isDirty
+
+            model.isDirty(path)
+
+            check if a path in the model has been changed since being marked as clean.
+
+        */
         isDirty: isDirty,
 
+        /**
+            ## .setDirtyState
+
+            model.setDirtyState(path, dirty, parentPath)
+
+            explicity mark a path in the model as dirty or clean
+
+        */
         setDirtyState: setDirtyState,
 
         gel: gel, // expose gel instance for extension

@@ -110,7 +110,7 @@ function set(path, value, model) {
             // if we are at the end of the line, set to the model
             reference[key] = value;
         }
-            //otherwise, RECURSANIZE!
+            //otherwise, dig deeper
         else {
             reference = reference[key];
         }
