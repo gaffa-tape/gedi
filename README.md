@@ -42,25 +42,31 @@ Path syntax is like HTML paths:
 
 This syntax is used as a way to reference value within the model, and is used by the get() set() remove() and bind() functions.
 
-Internally, all string paths are converted to an instance of a Path object. The constructor is accessable on the Gedi instance:
+Paths can be worked with however you like, as they are just strings. However the gedi-paths module has a number of helper functions that can make working with paths easier.
 
-    var path = new model.Path('[thing]');
+Make a path from a key:
 
-This object makes working with paths easier:
+    var paths = require('gedi-paths');
+    
+    var path = paths.create('thing'); 
+    
+    // returns '[thing]'
 
-    var resolvedPath = new Path().append('[/hello]', '[things]', '[..stuff]', '[majigger]');
+Resolve a path:
+
+    var resolvedPath = paths.resolve('[/hello]', '[things]', '[..stuff]', '[majigger]');
 
     // resolvedPath will be [hello/majigger]
 
 You can go up levels to a specific key in a path:
 
-    var resolvedPath = new Path('[/accounts/5/docs/4/title]').append('[..docs]');
+    var resolvedPath = paths.resole('[/accounts/5/docs/4/title]', '[..docs]');
 
     // resolvedPath will be [/accounts/5/docs]
 
 You can go to the last removed key after going up a level:
 
-    var resolvedPath = new Path('[/accounts/5/docs/4/title]').append('[..accounts/#/id]');
+    var resolvedPath = paths.resolve('[/accounts/5/docs/4/title]', '[..accounts/#/id]');
 
     // resolvedPath will be [/accounts/5/id]
 
@@ -201,13 +207,31 @@ You can bind to paths containing wildcards to watch for changes to properties on
     });
 
     gedi.set('[thing/1/stuff/1/a]', 1); // will alert 2
-    gedi.set('[thing/2/stuff/2/b]', 2); // not trigger the callback, because the triggered path does not match the bound path
+    gedi.set('[thing/2/stuff/2/b]', 2); // will not trigger the callback, because the triggered path does not match the bound path
 
 
 ### Binding to an Expression ###
 
 if an Expression is passed to bind(), it will automatically detect every binding in the expression and set the callback to trigger when any referenced parts of the model changes.
 
+    model.bind('(|| [a] [b] [c])', function(event){
+        // Do something.
+    });
+
+The event object passed to the callback has a number of properties that can be useful:
+
+    target: The path that triggered the callback
+    
+    binding: The expression that the callback is bound to.
+    
+    captureType: can be 'target', 'bubble', 'sink', or 'arrayItem'. 
+        - target means the event was captured directly on the target path
+        - sink means the event was caused at a a parent path, and has sunk down to the bound path
+        - bubble means the event was caused by a child path, and has bubbled up to the bound path
+        - arrayItem is a type of bubble, but where the target path was a direct child of an array.
+          this is usefull because effecting array children can affect the array's lenght property.
+        
+    getValue: a callback that can be used to evaulate the expression that was used to bind the callback, and return the value, eg:
 
     model.bind('(|| [a] [b] [c])', function(event){
         alert(event.getValue());
