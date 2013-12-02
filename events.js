@@ -1,4 +1,4 @@
-var HybridMap = require('hybrid-map').HybridMap,
+var WeakMap = require('weakmap'),
     paths = require('gedi-paths'),
     pathConstants = paths.constants
     modelOpperations = require('./modelOpperations'),
@@ -12,8 +12,8 @@ module.exports = function(modelGet, gel, PathToken){
 
     function resetEvents(){
         modelBindings = {};
-        modelBindingDetails = new HybridMap();
-        callbackReferenceDetails = new HybridMap();
+        modelBindingDetails = new WeakMap();
+        callbackReferenceDetails = new WeakMap();
     }
 
     resetEvents();
@@ -129,7 +129,7 @@ module.exports = function(modelGet, gel, PathToken){
 
     function triggerPath(path, target, captureType){
         var targetReference = get(path, modelBindings),
-            referenceDetails = modelBindingDetails.get(targetReference);
+            referenceDetails = targetReference && modelBindingDetails.get(targetReference);
 
         if(referenceDetails){
             for(var i = 0; i < referenceDetails.length; i++) {
@@ -203,7 +203,7 @@ module.exports = function(modelGet, gel, PathToken){
         }
 
         if(path == null){
-            var references = callbackReferenceDetails.get(callback);
+            var references = callback && callbackReferenceDetails.get(callback);
             if(references){
                 while(references.length){
                     debindExpression(references.pop(), callback);

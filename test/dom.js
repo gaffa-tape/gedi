@@ -26,15 +26,15 @@ if(typeof window !== 'undefined'){
                 element2: element
             });
 
-        t.plan(1);
+        t.plan(2);
 
         gedi.bind('[element2/className]', function(event){
             t.equal(
                 event.getValue(),
                 'thing',
-                'changes to a DOM node via reference worked somehow even though it shouldnt'
+                'changes to a DOM node via reference worked'
             );
-        })
+        });
 
         t.pass('references are not supported on DOM nodes');
 
