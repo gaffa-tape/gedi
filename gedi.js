@@ -7,7 +7,7 @@
 //THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 var Gel = require('gel-js'),
-    HybridMap = require('hybrid-map').HybridMap,
+    WeakMap = require('weakmap'),
     createPathToken = require('./pathToken'),
     Token = Gel.Token,
     paths = require('gedi-paths'),
@@ -46,7 +46,7 @@ function newGedi(model) {
     var gel = new Gel(),
 
         // Storage for tracking references within the model
-        modelReferences = new HybridMap(),
+        modelReferences = new WeakMap(),
 
         // Storage for tracking the dirty state of the model
         dirtyModel = {},
@@ -111,7 +111,7 @@ function newGedi(model) {
         delete objectReferences[path];
 
         if(!Object.keys(objectReferences).length){
-            modelReferences.del(object);
+            modelReferences['delete'](object);
         }
 
         for(var key in object){
