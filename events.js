@@ -1,9 +1,9 @@
 var WeakMap = require('weakmap'),
     paths = require('gedi-paths'),
     pathConstants = paths.constants
-    modelOpperations = require('./modelOpperations'),
-    get = modelOpperations.get,
-    set = modelOpperations.set;
+    modelOperations = require('./modelOperations'),
+    get = modelOperations.get,
+    set = modelOperations.set;
 
 module.exports = function(modelGet, gel, PathToken){
     var modelBindings,

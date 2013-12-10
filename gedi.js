@@ -14,9 +14,9 @@ var Gel = require('gel-js'),
     pathConstants = paths.constants,
     createSpec = require('spec-js'),
     createEvents = require('./events'),
-    modelOpperations = require('./modelOpperations'),
-    get = modelOpperations.get,
-    set = modelOpperations.set;
+    modelOperations = require('./modelOperations'),
+    get = modelOperations.get,
+    set = modelOperations.set;
 
 //Create gedi
 var gediConstructor = newGedi;
