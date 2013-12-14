@@ -5,18 +5,47 @@ var WeakMap = require('weakmap'),
     get = modelOperations.get,
     set = modelOperations.set;
 
+var isBrowser = typeof Node != 'undefined';
+
 module.exports = function(modelGet, gel, PathToken){
     var modelBindings,
         modelBindingDetails,
-        callbackReferenceDetails;
+        callbackReferenceDetails,
+        modelReferences;
 
     function resetEvents(){
         modelBindings = {};
         modelBindingDetails = new WeakMap();
         callbackReferenceDetails = new WeakMap();
+        modelReferences = new WeakMap();
     }
 
     resetEvents();
+
+    function ModelEventEmitter(){
+        this.alreadyEmitted = {};
+    }
+    ModelEventEmitter.prototype.emit = function(eventDetails){
+        if(!Array.isArray(eventDetails)){
+            eventDetails = [eventDetails];
+        }
+        for(var i = 0; i < eventDetails.length; i++) {
+            var eventDetail = eventDetails[i];
+
+            if(eventDetail.binding in this.alreadyEmitted){
+                continue;
+            }
+
+            this.alreadyEmitted[eventDetail.binding] = null;
+
+            eventDetail.callback({
+                target: eventDetail.target,
+                binding: eventDetail.binding,
+                captureType: eventDetail.captureType,
+                getValue: eventDetail.getValue
+            });
+        }
+    };
 
     var memoisedExpressionPaths = {};
     function getPathsInExpression(expression) {
@@ -127,9 +156,10 @@ module.exports = function(modelGet, gel, PathToken){
         }
     }
 
-    function triggerPath(path, target, captureType){
+    function emitEvents(path, target, captureType, emitter){
         var targetReference = get(path, modelBindings),
-            referenceDetails = targetReference && modelBindingDetails.get(targetReference);
+            referenceDetails = targetReference && modelBindingDetails.get(targetReference),
+            eventDetails = [];
 
         if(referenceDetails){
             for(var i = 0; i < referenceDetails.length; i++) {
@@ -143,7 +173,8 @@ module.exports = function(modelGet, gel, PathToken){
                     continue;
                 }
 
-                details.callback({
+                emitter.emit({
+                    callback: details.callback,
                     target: target,
                     binding: wildcardPath || details.binding,
                     captureType: captureType,
@@ -154,32 +185,59 @@ module.exports = function(modelGet, gel, PathToken){
 
         if(captureType === 'target' || captureType === 'sink'){
             for(var key in targetReference){
-                triggerPath(paths.append(path, key), path, 'sink');
+                emitEvents(paths.append(path, key), target, 'sink', emitter);
             }
         }
     }
 
-    function trigger(path){
-        // resolve path to root
-        path = paths.resolve(paths.createRoot(), path);
+    function bubbleEvent(path, target, emitter){
+        var pathParts = path.toParts,
+            currentBubblePath,
+            type = 'bubble';
 
-        var targetReference = get(path, modelBindings),
-            pathParts = paths.toParts(path),
-            lastKey = pathParts[pathParts.length-1],
-            currentBubblePath = paths.create();
-
-        for(var i = 0; i < pathParts.length; i++){
-            var captureType = 'bubble';
+        for(var i = 0; i < pathParts.length - 1; i++){
 
             currentBubblePath = paths.append(currentBubblePath, pathParts[i]);
 
             if(i === pathParts.length -2 && !isNaN(pathParts[i+1])){
-                captureType = 'arrayItem';
-            }else if(i === pathParts.length -1){
-                captureType = 'target';
+                type = 'arrayItem';
             }
-            triggerPath(currentBubblePath, path, captureType);
+
+            emitEvents(currentBubblePath, path, type, emitter);
+            if(i !== pathParts.length -1){
+                triggerReferences(currentBubblePath, path, emitter);
+            }
         }
+    }
+
+    function trigger(path, type){
+        // resolve path to root
+        path = paths.resolve(paths.createRoot(), path);
+        type = type || 'target';
+
+        var targetReference = get(path, modelBindings),
+            pathParts = paths.toParts(path),
+            lastKey = pathParts[pathParts.length-1],
+            currentBubblePath = paths.create(),
+            eventDetails = [],
+            emitter = new ModelEventEmitter();
+
+        for(var i = 0; i < pathParts.length; i++){
+
+            currentBubblePath = paths.append(currentBubblePath, pathParts[i]);
+
+            if(i === pathParts.length -2 && !isNaN(pathParts[i+1])){
+                type = 'arrayItem';
+            }else if(i !== pathParts.length -1){
+                type = 'bubble';
+            }
+            emitEvents(currentBubblePath, path, type, emitter);
+            if(i !== pathParts.length -1){
+                triggerReferences(currentBubblePath, path, emitter);
+            }
+        }
+
+        console.log(Object.keys(emitter.alreadyEmitted));
     }
 
     function debindExpression(binding, callback){
@@ -231,9 +289,104 @@ module.exports = function(modelGet, gel, PathToken){
         }
     }
 
+
+    // Add a new object who's references should be tracked.
+    function addModelReference(path, object){
+        if(!object || typeof object !== 'object'){
+            return;
+        }
+
+        var path = paths.resolve(paths.createRoot(),path),
+            objectReferences = modelReferences.get(object);
+
+        if(!objectReferences){
+            objectReferences = {};
+            modelReferences.set(object, objectReferences);
+        }
+
+        if(!(path in objectReferences)){
+            objectReferences[path] = null;
+        }
+
+        if(isBrowser && object instanceof Node){
+            return;
+        }
+
+        for(var key in object){
+            var prop = object[key];
+
+            // Faster to check again here than to create pointless paths.
+            if(prop && typeof prop === 'object'){
+                var refPath = paths.append(path, key);
+                if(modelReferences.has(prop)){
+                    if(prop !== object){
+                        modelReferences.get(prop)[refPath] = null;
+                    }
+                }else{
+                    addModelReference(refPath, prop);
+                }
+            }
+        }
+    }
+
+    function removeModelReference(path, object){
+        if(!object || typeof object !== 'object'){
+            return;
+        }
+
+        var path = paths.resolve(paths.createRoot(),path),
+            objectReferences = modelReferences.get(object),
+            refIndex;
+
+        if(!objectReferences){
+            return;
+        }
+
+        delete objectReferences[path];
+
+        if(!Object.keys(objectReferences).length){
+            modelReferences['delete'](object);
+        }
+
+        for(var key in object){
+            var prop = object[key];
+
+            // Faster to check again here than to create pointless paths.
+            if(prop && typeof prop === 'object' && prop !== object){
+                removeModelReference(paths.append(path, paths.create(key)), prop);
+            }
+        }
+    }
+
+    function triggerReferences(path, targetPath, emitter){
+        var parentPath = paths.resolve(paths.createRoot(), path),
+            parentObject,
+            objectReferences;
+
+        parentObject = modelGet(parentPath);
+
+        if(!parentObject || typeof parentObject !== 'object'){
+            return;
+        }
+
+        objectReferences = modelReferences.get(parentObject);
+
+        if(!objectReferences){
+            return;
+        }
+
+        for(var path in objectReferences){
+            if(path !== parentPath){
+                emitEvents(path, targetPath, 'bubble', emitter);
+            }
+        }
+    }
+
     return {
         bind: bind,
         trigger: trigger,
-        debind: debind
+        debind: debind,
+        addModelReference: addModelReference,
+        removeModelReference: removeModelReference
     };
 };
