@@ -156,7 +156,7 @@ module.exports = function(modelGet, gel, PathToken){
         }
     }
 
-    function emitEvents(path, target, captureType, emitter){
+    function emitEvent(path, target, emitter, captureType){
         var targetReference = get(path, modelBindings),
             referenceDetails = targetReference && modelBindingDetails.get(targetReference),
             eventDetails = [];
@@ -180,60 +180,54 @@ module.exports = function(modelGet, gel, PathToken){
                     captureType: captureType,
                     getValue: createGetValue(wildcardPath || details.binding, details.parentPath)
                 });
+
+                triggerReferences(currentBubblePath, path, emitter);
             };
         }
 
         if(captureType === 'target' || captureType === 'sink'){
             for(var key in targetReference){
-                emitEvents(paths.append(path, key), target, 'sink', emitter);
+                emitEvents(paths.append(path, key), target, emitter, 'sink');
             }
         }
     }
 
-    function bubbleEvent(path, target, emitter){
-        var pathParts = path.toParts,
-            currentBubblePath,
-            type = 'bubble';
+    function emitEvents(path, target, emitter, type){
+        var pathParts = paths.toParts(path);
 
-        for(var i = 0; i < pathParts.length - 1; i++){
-
-            currentBubblePath = paths.append(currentBubblePath, pathParts[i]);
-
-            if(i === pathParts.length -2 && !isNaN(pathParts[i+1])){
-                type = 'arrayItem';
-            }
-
-            emitEvents(currentBubblePath, path, type, emitter);
-            if(i !== pathParts.length -1){
-                triggerReferences(currentBubblePath, path, emitter);
-            }
-        }
-    }
-
-    function trigger(path, type){
-        // resolve path to root
-        path = paths.resolve(paths.createRoot(), path);
         type = type || 'target';
 
-        var targetReference = get(path, modelBindings),
-            pathParts = paths.toParts(path),
-            lastKey = pathParts[pathParts.length-1],
-            currentBubblePath = paths.create(),
-            eventDetails = [],
-            emitter = new ModelEventEmitter();
+        for(var i = 0; i < pathParts.length - 1; i++){
+            emitEvent(paths.create(pathParts.slice(0, i+1)), target, emitter, 'bubble');
+        }
 
-        for(var i = 0; i < pathParts.length; i++){
+        emitEvent(path, target, emitter, type);
+    }
 
-            currentBubblePath = paths.append(currentBubblePath, pathParts[i]);
+    function trigger(targetPath){
+        // resolve targetPath to root
+        targetPath = paths.resolve(paths.createRoot(), targetPath);
 
-            if(i === pathParts.length -2 && !isNaN(pathParts[i+1])){
-                type = 'arrayItem';
-            }else if(i !== pathParts.length -1){
-                type = 'bubble';
-            }
-            emitEvents(currentBubblePath, path, type, emitter);
-            if(i !== pathParts.length -1){
-                triggerReferences(currentBubblePath, path, emitter);
+        var emitter = new ModelEventEmitter(),
+            parentPath = paths.resolve(paths.createRoot(), targetPath),
+            parentObject,
+            objectReferences;
+
+        parentObject = modelGet(parentPath);
+
+        if(!parentObject || typeof parentObject !== 'object'){
+            return;
+        }
+
+        objectReferences = modelReferences.get(parentObject);
+
+        if(!objectReferences){
+            return;
+        }
+
+        for(var path in objectReferences){
+            if(path !== parentPath){
+                emitEvents(path, targetPath, 'bubble', emitter);
             }
         }
 
@@ -354,30 +348,6 @@ module.exports = function(modelGet, gel, PathToken){
             // Faster to check again here than to create pointless paths.
             if(prop && typeof prop === 'object' && prop !== object){
                 removeModelReference(paths.append(path, paths.create(key)), prop);
-            }
-        }
-    }
-
-    function triggerReferences(path, targetPath, emitter){
-        var parentPath = paths.resolve(paths.createRoot(), path),
-            parentObject,
-            objectReferences;
-
-        parentObject = modelGet(parentPath);
-
-        if(!parentObject || typeof parentObject !== 'object'){
-            return;
-        }
-
-        objectReferences = modelReferences.get(parentObject);
-
-        if(!objectReferences){
-            return;
-        }
-
-        for(var path in objectReferences){
-            if(path !== parentPath){
-                emitEvents(path, targetPath, 'bubble', emitter);
             }
         }
     }
