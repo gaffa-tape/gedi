@@ -143,7 +143,7 @@ test('recursive added reference bind direct child', function(t) {
 });
 
 
-test.only('deep reference change', function(t) {
+test('deep reference change', function(t) {
     var obj = {a:{b:'c'}},
         gedi = new Gedi();
 

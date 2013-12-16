@@ -22,28 +22,68 @@ module.exports = function(modelGet, gel, PathToken){
 
     resetEvents();
 
-    function ModelEventEmitter(){
+    function ModelEventEmitter(target){
+        this.model = modelGet();
+        this.events = {};
         this.alreadyEmitted = {};
+        this.target = target;
     }
-    ModelEventEmitter.prototype.emit = function(eventDetails){
-        if(!Array.isArray(eventDetails)){
-            eventDetails = [eventDetails];
-        }
-        for(var i = 0; i < eventDetails.length; i++) {
-            var eventDetail = eventDetails[i];
+    ModelEventEmitter.prototype.pushPath = function(path, type, skipReferences){
+        var currentEvent = this.events[path];
 
-            if(eventDetail.binding in this.alreadyEmitted){
+        if(!currentEvent || type === 'target'){
+            this.events[path] = type;
+        }
+
+        if(skipReferences){
+            return;
+        }
+
+        var modelValue = get(path, this.model),
+            references = typeof modelValue === 'object' && modelReferences.get(modelValue);
+
+        for(var key in references){
+            this.pushPath(key, type, true);
+        }
+
+        return;
+    };
+    ModelEventEmitter.prototype.emit = function(){
+        var emitter = this,
+            targetReference,
+            referenceDetails;
+
+
+        for(var path in this.events){
+            var type = this.events[path];
+
+            targetReference = get(path, modelBindings);
+            referenceDetails = targetReference && modelBindingDetails.get(targetReference);
+
+            if(!referenceDetails){
                 continue;
             }
 
-            this.alreadyEmitted[eventDetail.binding] = null;
+            for(var i = 0; i < referenceDetails.length; i++) {
+                var details = referenceDetails[i],
+                    binding = details.binding,
+                    wildcardPath = matchWildcardPath(binding, emitter.target, details.parentPath);
 
-            eventDetail.callback({
-                target: eventDetail.target,
-                binding: eventDetail.binding,
-                captureType: eventDetail.captureType,
-                getValue: eventDetail.getValue
-            });
+                // binding had wildcards but
+                // did not match the current target
+                if(wildcardPath === false){
+                    continue;
+                }
+
+                console.log(details.binding);
+
+                details.callback({
+                    target: emitter.target,
+                    binding: wildcardPath || details.binding,
+                    captureType: type,
+                    getValue: createGetValue(wildcardPath || details.binding, details.parentPath)
+                });
+            };
         }
     };
 
@@ -156,82 +196,37 @@ module.exports = function(modelGet, gel, PathToken){
         }
     }
 
-    function emitEvent(path, target, emitter, captureType){
-        var targetReference = get(path, modelBindings),
-            referenceDetails = targetReference && modelBindingDetails.get(targetReference),
-            eventDetails = [];
+    function sinkTrigger(path, emitter){
+        var reference = get(path, modelBindings);
 
-        if(referenceDetails){
-            for(var i = 0; i < referenceDetails.length; i++) {
-                var details = referenceDetails[i],
-                    binding = details.binding,
-                    wildcardPath = matchWildcardPath(binding, target, details.parentPath);
-
-                // binding had wildcards but
-                // did not match the current target
-                if(wildcardPath === false){
-                    continue;
-                }
-
-                emitter.emit({
-                    callback: details.callback,
-                    target: target,
-                    binding: wildcardPath || details.binding,
-                    captureType: captureType,
-                    getValue: createGetValue(wildcardPath || details.binding, details.parentPath)
-                });
-
-                triggerReferences(currentBubblePath, path, emitter);
-            };
-        }
-
-        if(captureType === 'target' || captureType === 'sink'){
-            for(var key in targetReference){
-                emitEvents(paths.append(path, key), target, emitter, 'sink');
-            }
+        for(var key in reference){
+            var sinkPath = paths.append(path, key);
+            emitter.pushPath(sinkPath, 'sink');
+            sinkTrigger(sinkPath, emitter);
         }
     }
 
-    function emitEvents(path, target, emitter, type){
-        var pathParts = paths.toParts(path);
+    function trigger(path){
+        // resolve path to root
+        path = paths.resolve(paths.createRoot(), path);
 
-        type = type || 'target';
+        var emitter = new ModelEventEmitter(path),
+            pathParts = paths.toParts(path),
+            type = 'target';
 
         for(var i = 0; i < pathParts.length - 1; i++){
-            emitEvent(paths.create(pathParts.slice(0, i+1)), target, emitter, 'bubble');
+
+            emitter.pushPath(
+                paths.create(pathParts.slice(0, i+1)),
+                'bubble'
+            );
         }
 
-        emitEvent(path, target, emitter, type);
-    }
+        emitter.pushPath(path, 'target');
 
-    function trigger(targetPath){
-        // resolve targetPath to root
-        targetPath = paths.resolve(paths.createRoot(), targetPath);
+        sinkTrigger(path, emitter);
 
-        var emitter = new ModelEventEmitter(),
-            parentPath = paths.resolve(paths.createRoot(), targetPath),
-            parentObject,
-            objectReferences;
-
-        parentObject = modelGet(parentPath);
-
-        if(!parentObject || typeof parentObject !== 'object'){
-            return;
-        }
-
-        objectReferences = modelReferences.get(parentObject);
-
-        if(!objectReferences){
-            return;
-        }
-
-        for(var path in objectReferences){
-            if(path !== parentPath){
-                emitEvents(path, targetPath, 'bubble', emitter);
-            }
-        }
-
-        console.log(Object.keys(emitter.alreadyEmitted));
+        emitter.emit();
     }
 
     function debindExpression(binding, callback){
