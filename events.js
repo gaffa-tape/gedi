@@ -40,19 +40,28 @@ module.exports = function(modelGet, gel, PathToken){
         }
 
         var modelValue = get(path, this.model),
-            references = typeof modelValue === 'object' && modelReferences.get(modelValue);
+            references = typeof modelValue === 'object' && modelReferences.get(modelValue),
+            referencePathParts,
+            referenceBubblePath;
 
         for(var key in references){
-            this.pushPath(key, type, true);
-        }
+            referencePathParts = paths.toParts(key);
 
-        return;
+            for(var i = 0; i < referencePathParts.length - 1; i++) {
+                referenceBubblePath = paths.create(referencePathParts.slice(0, i+1));
+                this.pushPath(referenceBubblePath, 'bubble', true);
+            }
+
+            this.pushPath(key, type, true);
+            if(type === 'target'){
+                sinkTrigger(key, this, true);
+            }
+        }
     };
     ModelEventEmitter.prototype.emit = function(){
         var emitter = this,
             targetReference,
             referenceDetails;
-
 
         for(var path in this.events){
             var type = this.events[path];
@@ -74,8 +83,6 @@ module.exports = function(modelGet, gel, PathToken){
                 if(wildcardPath === false){
                     continue;
                 }
-
-                console.log(details.binding);
 
                 details.callback({
                     target: emitter.target,
@@ -196,13 +203,13 @@ module.exports = function(modelGet, gel, PathToken){
         }
     }
 
-    function sinkTrigger(path, emitter){
+    function sinkTrigger(path, emitter, skipReferences){
         var reference = get(path, modelBindings);
 
         for(var key in reference){
             var sinkPath = paths.append(path, key);
-            emitter.pushPath(sinkPath, 'sink');
-            sinkTrigger(sinkPath, emitter);
+            emitter.pushPath(sinkPath, 'sink', skipReferences);
+            sinkTrigger(sinkPath, emitter, skipReferences);
         }
     }
 

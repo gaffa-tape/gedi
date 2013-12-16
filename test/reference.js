@@ -1,7 +1,7 @@
 var Gedi = require('../'),
     test = require('grape');
 
-test('reference bind', function(t) {
+test.only('reference bind', function(t) {
     var obj = {},
         gedi = new Gedi({
             foo: obj,
@@ -93,7 +93,7 @@ test('recursive added reference bind', function(t) {
 
 
 test('array reference bind', function(t) {
-    t.plan(3);
+    t.plan(4);
 
     var items = [
             {
