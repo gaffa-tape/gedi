@@ -22,6 +22,12 @@ module.exports = function(modelGet, gel, PathToken){
 
     resetEvents();
 
+    function createGetValue(expression, parentPath){
+        return function(scope, returnAsTokens){
+            return modelGet(expression, parentPath, scope, returnAsTokens);
+        }
+    }
+
     function ModelEventEmitter(target){
         this.model = modelGet();
         this.events = {};
@@ -42,20 +48,25 @@ module.exports = function(modelGet, gel, PathToken){
         var modelValue = get(path, this.model),
             references = typeof modelValue === 'object' && modelReferences.get(modelValue),
             referencePathParts,
-            referenceBubblePath;
+            referenceBubblePath,
+            pathParts = paths.toParts(path),
+            targetParts = paths.toParts(this.target),
+            referenceTarget;
+
+        // If no references, or only in the model once
+        // There are no reference events to fire.
+        if(!references || Object.keys(references).length === 1){
+            return;
+        }
 
         for(var key in references){
             referencePathParts = paths.toParts(key);
 
-            for(var i = 0; i < referencePathParts.length - 1; i++) {
-                referenceBubblePath = paths.create(referencePathParts.slice(0, i+1));
-                this.pushPath(referenceBubblePath, 'bubble', true);
-            }
+            referenceTarget = paths.create(referencePathParts.concat(targetParts.slice(pathParts.length)));
 
-            this.pushPath(key, type, true);
-            if(type === 'target'){
-                sinkTrigger(key, this, true);
-            }
+            bubbleTrigger(referenceTarget, this, true);
+            this.pushPath(referenceTarget, 'target', true);
+            sinkTrigger(referenceTarget, this, true);
         }
     };
     ModelEventEmitter.prototype.emit = function(){
@@ -94,6 +105,44 @@ module.exports = function(modelGet, gel, PathToken){
         }
     };
 
+    function sinkTrigger(path, emitter, skipReferences){
+        var reference = get(path, modelBindings);
+
+        for(var key in reference){
+            var sinkPath = paths.append(path, key);
+            emitter.pushPath(sinkPath, 'sink', skipReferences);
+            sinkTrigger(sinkPath, emitter, skipReferences);
+        }
+    }
+
+    function bubbleTrigger(path, emitter, skipReferences){
+        var pathParts = paths.toParts(path);
+
+        for(var i = 0; i < pathParts.length - 1; i++){
+
+            emitter.pushPath(
+                paths.create(pathParts.slice(0, i+1)),
+                'bubble',
+                skipReferences
+            );
+        }
+    }
+
+    function trigger(path){
+        // resolve path to root
+        path = paths.resolve(paths.createRoot(), path);
+
+        var emitter = new ModelEventEmitter(path);
+
+        bubbleTrigger(path, emitter);
+
+        emitter.pushPath(path, 'target');
+
+        sinkTrigger(path, emitter);
+
+        emitter.emit();
+    }
+
     var memoisedExpressionPaths = {};
     function getPathsInExpression(expression) {
         var paths = [];
@@ -114,6 +163,21 @@ module.exports = function(modelGet, gel, PathToken){
             return memoisedExpressionPaths[expression] = [paths.create(expression)];
         }
         return memoisedExpressionPaths[expression] = paths;
+    }
+
+    function addReferencesForBinding(path){
+        var model = modelGet(),
+            pathParts = paths.toParts(path),
+            itemPath = path,
+            item = get(path, model);
+
+        while(typeof item !== 'object' && pathParts.length){
+            pathParts.pop();
+            itemPath = paths.create(pathParts);
+            item = get(itemPath, model);
+        }
+
+        addModelReference(itemPath, item);
     }
 
     function setBinding(path, details){
@@ -142,6 +206,8 @@ module.exports = function(modelGet, gel, PathToken){
         referenceDetails.push(details);
 
         set(resolvedPath, reference, modelBindings);
+
+        addReferencesForBinding(path);
     }
 
     function bindExpression(binding, details){
@@ -195,45 +261,6 @@ module.exports = function(modelGet, gel, PathToken){
 
             return paths.create(wildcardParts);
         }
-    }
-
-    function createGetValue(expression, parentPath){
-        return function(scope, returnAsTokens){
-            return modelGet(expression, parentPath, scope, returnAsTokens);
-        }
-    }
-
-    function sinkTrigger(path, emitter, skipReferences){
-        var reference = get(path, modelBindings);
-
-        for(var key in reference){
-            var sinkPath = paths.append(path, key);
-            emitter.pushPath(sinkPath, 'sink', skipReferences);
-            sinkTrigger(sinkPath, emitter, skipReferences);
-        }
-    }
-
-    function trigger(path){
-        // resolve path to root
-        path = paths.resolve(paths.createRoot(), path);
-
-        var emitter = new ModelEventEmitter(path),
-            pathParts = paths.toParts(path),
-            type = 'target';
-
-        for(var i = 0; i < pathParts.length - 1; i++){
-
-            emitter.pushPath(
-                paths.create(pathParts.slice(0, i+1)),
-                'bubble'
-            );
-        }
-
-        emitter.pushPath(path, 'target');
-
-        sinkTrigger(path, emitter);
-
-        emitter.emit();
     }
 
     function debindExpression(binding, callback){

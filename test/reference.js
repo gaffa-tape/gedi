@@ -1,7 +1,7 @@
 var Gedi = require('../'),
     test = require('grape');
 
-test.only('reference bind', function(t) {
+test('reference bind', function(t) {
     var obj = {},
         gedi = new Gedi({
             foo: obj,
@@ -52,7 +52,7 @@ test('late added reference bind', function(t) {
     var obj = {things:'stuff'},
         gedi = new Gedi();
 
-    t.plan(4);
+    t.plan(5);
 
     gedi.bind('[foo/things]', function(){
         t.pass('detected [foo/things] change');
