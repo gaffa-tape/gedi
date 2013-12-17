@@ -46,7 +46,7 @@ module.exports = function(modelGet, gel, PathToken){
         }
 
         var modelValue = get(path, this.model),
-            references = typeof modelValue === 'object' && modelReferences.get(modelValue),
+            references = modelValue && typeof modelValue === 'object' && modelReferences.get(modelValue),
             referencePathParts,
             referenceBubblePath,
             pathParts = paths.toParts(path),
