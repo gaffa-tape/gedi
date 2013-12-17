@@ -2,7 +2,7 @@
   "name": "gedi",
   "description": "An evented data API",
   "author": "Kory Nunn <knunn187@gmail.com>",
-  "version": "0.12.3",
+  "version": "0.12.4",
   "main": "gedi.js",
   "dependencies": {
     "gedi-paths": "0.4.x",
