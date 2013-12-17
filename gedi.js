@@ -26,7 +26,6 @@ var exceptions = {
 };
 
 var arrayProto = [];
-var isBrowser = typeof Node != 'undefined';
 
 
 //***********************************************
@@ -45,9 +44,6 @@ function newGedi(model) {
         // gel instance
     var gel = new Gel(),
 
-        // Storage for tracking references within the model
-        modelReferences = new WeakMap(),
-
         // Storage for tracking the dirty state of the model
         dirtyModel = {},
 
@@ -56,97 +52,9 @@ function newGedi(model) {
         // Storage for model event handles
         events = createEvents(modelGet, gel, PathToken);
 
-    // Add a new object who's references should be tracked.
-    function addModelReference(path, object){
-        if(!object || typeof object !== 'object'){
-            return;
-        }
-
-        var path = paths.resolve(paths.createRoot(),path),
-            objectReferences = modelReferences.get(object);
-
-        if(!objectReferences){
-            objectReferences = {};
-            modelReferences.set(object, objectReferences);
-        }
-
-        if(!(path in objectReferences)){
-            objectReferences[path] = null;
-        }
-
-        if(isBrowser && object instanceof Node){
-            return;
-        }
-
-        for(var key in object){
-            var prop = object[key];
-
-            // Faster to check again here than to create pointless paths.
-            if(prop && typeof prop === 'object'){
-                var refPath = paths.append(path, key);
-                if(modelReferences.has(prop)){
-                    if(prop !== object){
-                        modelReferences.get(prop)[refPath] = null;
-                    }
-                }else{
-                    addModelReference(refPath, prop);
-                }
-            }
-        }
-    }
-
-    function removeModelReference(path, object){
-        if(!object || typeof object !== 'object'){
-            return;
-        }
-
-        var path = paths.resolve(paths.createRoot(),path),
-            objectReferences = modelReferences.get(object),
-            refIndex;
-
-        if(!objectReferences){
-            return;
-        }
-
-        delete objectReferences[path];
-
-        if(!Object.keys(objectReferences).length){
-            modelReferences['delete'](object);
-        }
-
-        for(var key in object){
-            var prop = object[key];
-
-            // Faster to check again here than to create pointless paths.
-            if(prop && typeof prop === 'object' && prop !== object){
-                removeModelReference(paths.append(path, paths.create(key)), prop);
-            }
-        }
-    }
-
-    function triggerModelReferences(targetPath){
-        var parentPath = paths.resolve(paths.createRoot(), targetPath, paths.create(pathConstants.upALevel)),
-            parentObject = get(parentPath, model);
-
-        if(!parentObject || typeof parentObject !== 'object'){
-            return;
-        }
-
-        var objectReferences = modelReferences.get(parentObject);
-
-        if(!objectReferences){
-            return;
-        }
-
-        for(var path in objectReferences){
-            if(path !== parentPath){
-                events.trigger(path);
-            }
-        }
-    }
 
     //Initialise model references
-    addModelReference('[/]', model);
+    events.addModelReference('[/]', model);
 
     //internal functions
 
@@ -372,13 +280,12 @@ function newGedi(model) {
         set(expression, value, model);
 
         if(!(value instanceof DeletedItem)){
-            addModelReference(expression, value);
+            events.addModelReference(expression, value);
             events.trigger(expression);
-            triggerModelReferences(expression);
         }
 
         if(!(value && typeof value !== 'object') && previousValue && typeof previousValue === 'object'){
-            removeModelReference(expression, previousValue);
+            events.removeModelReference(expression, previousValue);
         }
     }
 
@@ -448,8 +355,7 @@ function newGedi(model) {
             events.trigger(expression);
         }
 
-        removeModelReference(expression, removedItem);
-        triggerModelReferences(expression);
+        events.removeModelReference(expression, removedItem);
     }
 
     //***********************************************

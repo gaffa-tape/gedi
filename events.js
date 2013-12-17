@@ -5,18 +5,143 @@ var WeakMap = require('weakmap'),
     get = modelOperations.get,
     set = modelOperations.set;
 
+var isBrowser = typeof Node != 'undefined';
+
 module.exports = function(modelGet, gel, PathToken){
     var modelBindings,
         modelBindingDetails,
-        callbackReferenceDetails;
+        callbackReferenceDetails,
+        modelReferences;
 
     function resetEvents(){
         modelBindings = {};
         modelBindingDetails = new WeakMap();
         callbackReferenceDetails = new WeakMap();
+        modelReferences = new WeakMap();
     }
 
     resetEvents();
+
+    function createGetValue(expression, parentPath){
+        return function(scope, returnAsTokens){
+            return modelGet(expression, parentPath, scope, returnAsTokens);
+        }
+    }
+
+    function ModelEventEmitter(target){
+        this.model = modelGet();
+        this.events = {};
+        this.alreadyEmitted = {};
+        this.target = target;
+    }
+    ModelEventEmitter.prototype.pushPath = function(path, type, skipReferences){
+        var currentEvent = this.events[path];
+
+        if(!currentEvent || type === 'target'){
+            this.events[path] = type;
+        }
+
+        if(skipReferences){
+            return;
+        }
+
+        var modelValue = get(path, this.model),
+            references = typeof modelValue === 'object' && modelReferences.get(modelValue),
+            referencePathParts,
+            referenceBubblePath,
+            pathParts = paths.toParts(path),
+            targetParts = paths.toParts(this.target),
+            referenceTarget;
+
+        // If no references, or only in the model once
+        // There are no reference events to fire.
+        if(!references || Object.keys(references).length === 1){
+            return;
+        }
+
+        for(var key in references){
+            referencePathParts = paths.toParts(key);
+
+            referenceTarget = paths.create(referencePathParts.concat(targetParts.slice(pathParts.length)));
+
+            bubbleTrigger(referenceTarget, this, true);
+            this.pushPath(referenceTarget, 'target', true);
+            sinkTrigger(referenceTarget, this, true);
+        }
+    };
+    ModelEventEmitter.prototype.emit = function(){
+        var emitter = this,
+            targetReference,
+            referenceDetails;
+
+        for(var path in this.events){
+            var type = this.events[path];
+
+            targetReference = get(path, modelBindings);
+            referenceDetails = targetReference && modelBindingDetails.get(targetReference);
+
+            if(!referenceDetails){
+                continue;
+            }
+
+            for(var i = 0; i < referenceDetails.length; i++) {
+                var details = referenceDetails[i],
+                    binding = details.binding,
+                    wildcardPath = matchWildcardPath(binding, emitter.target, details.parentPath);
+
+                // binding had wildcards but
+                // did not match the current target
+                if(wildcardPath === false){
+                    continue;
+                }
+
+                details.callback({
+                    target: emitter.target,
+                    binding: wildcardPath || details.binding,
+                    captureType: type,
+                    getValue: createGetValue(wildcardPath || details.binding, details.parentPath)
+                });
+            };
+        }
+    };
+
+    function sinkTrigger(path, emitter, skipReferences){
+        var reference = get(path, modelBindings);
+
+        for(var key in reference){
+            var sinkPath = paths.append(path, key);
+            emitter.pushPath(sinkPath, 'sink', skipReferences);
+            sinkTrigger(sinkPath, emitter, skipReferences);
+        }
+    }
+
+    function bubbleTrigger(path, emitter, skipReferences){
+        var pathParts = paths.toParts(path);
+
+        for(var i = 0; i < pathParts.length - 1; i++){
+
+            emitter.pushPath(
+                paths.create(pathParts.slice(0, i+1)),
+                'bubble',
+                skipReferences
+            );
+        }
+    }
+
+    function trigger(path){
+        // resolve path to root
+        path = paths.resolve(paths.createRoot(), path);
+
+        var emitter = new ModelEventEmitter(path);
+
+        bubbleTrigger(path, emitter);
+
+        emitter.pushPath(path, 'target');
+
+        sinkTrigger(path, emitter);
+
+        emitter.emit();
+    }
 
     var memoisedExpressionPaths = {};
     function getPathsInExpression(expression) {
@@ -38,6 +163,21 @@ module.exports = function(modelGet, gel, PathToken){
             return memoisedExpressionPaths[expression] = [paths.create(expression)];
         }
         return memoisedExpressionPaths[expression] = paths;
+    }
+
+    function addReferencesForBinding(path){
+        var model = modelGet(),
+            pathParts = paths.toParts(path),
+            itemPath = path,
+            item = get(path, model);
+
+        while(typeof item !== 'object' && pathParts.length){
+            pathParts.pop();
+            itemPath = paths.create(pathParts);
+            item = get(itemPath, model);
+        }
+
+        addModelReference(itemPath, item);
     }
 
     function setBinding(path, details){
@@ -66,6 +206,8 @@ module.exports = function(modelGet, gel, PathToken){
         referenceDetails.push(details);
 
         set(resolvedPath, reference, modelBindings);
+
+        addReferencesForBinding(path);
     }
 
     function bindExpression(binding, details){
@@ -121,67 +263,6 @@ module.exports = function(modelGet, gel, PathToken){
         }
     }
 
-    function createGetValue(expression, parentPath){
-        return function(scope, returnAsTokens){
-            return modelGet(expression, parentPath, scope, returnAsTokens);
-        }
-    }
-
-    function triggerPath(path, target, captureType){
-        var targetReference = get(path, modelBindings),
-            referenceDetails = targetReference && modelBindingDetails.get(targetReference);
-
-        if(referenceDetails){
-            for(var i = 0; i < referenceDetails.length; i++) {
-                var details = referenceDetails[i],
-                    binding = details.binding,
-                    wildcardPath = matchWildcardPath(binding, target, details.parentPath);
-
-                // binding had wildcards but
-                // did not match the current target
-                if(wildcardPath === false){
-                    continue;
-                }
-
-                details.callback({
-                    target: target,
-                    binding: wildcardPath || details.binding,
-                    captureType: captureType,
-                    getValue: createGetValue(wildcardPath || details.binding, details.parentPath)
-                });
-            };
-        }
-
-        if(captureType === 'target' || captureType === 'sink'){
-            for(var key in targetReference){
-                triggerPath(paths.append(path, key), path, 'sink');
-            }
-        }
-    }
-
-    function trigger(path){
-        // resolve path to root
-        path = paths.resolve(paths.createRoot(), path);
-
-        var targetReference = get(path, modelBindings),
-            pathParts = paths.toParts(path),
-            lastKey = pathParts[pathParts.length-1],
-            currentBubblePath = paths.create();
-
-        for(var i = 0; i < pathParts.length; i++){
-            var captureType = 'bubble';
-
-            currentBubblePath = paths.append(currentBubblePath, pathParts[i]);
-
-            if(i === pathParts.length -2 && !isNaN(pathParts[i+1])){
-                captureType = 'arrayItem';
-            }else if(i === pathParts.length -1){
-                captureType = 'target';
-            }
-            triggerPath(currentBubblePath, path, captureType);
-        }
-    }
-
     function debindExpression(binding, callback){
         var expressionPaths = getPathsInExpression(binding);
 
@@ -231,9 +312,80 @@ module.exports = function(modelGet, gel, PathToken){
         }
     }
 
+
+    // Add a new object who's references should be tracked.
+    function addModelReference(path, object){
+        if(!object || typeof object !== 'object'){
+            return;
+        }
+
+        var path = paths.resolve(paths.createRoot(),path),
+            objectReferences = modelReferences.get(object);
+
+        if(!objectReferences){
+            objectReferences = {};
+            modelReferences.set(object, objectReferences);
+        }
+
+        if(!(path in objectReferences)){
+            objectReferences[path] = null;
+        }
+
+        if(isBrowser && object instanceof Node){
+            return;
+        }
+
+        for(var key in object){
+            var prop = object[key];
+
+            // Faster to check again here than to create pointless paths.
+            if(prop && typeof prop === 'object'){
+                var refPath = paths.append(path, key);
+                if(modelReferences.has(prop)){
+                    if(prop !== object){
+                        modelReferences.get(prop)[refPath] = null;
+                    }
+                }else{
+                    addModelReference(refPath, prop);
+                }
+            }
+        }
+    }
+
+    function removeModelReference(path, object){
+        if(!object || typeof object !== 'object'){
+            return;
+        }
+
+        var path = paths.resolve(paths.createRoot(),path),
+            objectReferences = modelReferences.get(object),
+            refIndex;
+
+        if(!objectReferences){
+            return;
+        }
+
+        delete objectReferences[path];
+
+        if(!Object.keys(objectReferences).length){
+            modelReferences['delete'](object);
+        }
+
+        for(var key in object){
+            var prop = object[key];
+
+            // Faster to check again here than to create pointless paths.
+            if(prop && typeof prop === 'object' && prop !== object){
+                removeModelReference(paths.append(path, paths.create(key)), prop);
+            }
+        }
+    }
+
     return {
         bind: bind,
         trigger: trigger,
-        debind: debind
+        debind: debind,
+        addModelReference: addModelReference,
+        removeModelReference: removeModelReference
     };
 };

@@ -52,7 +52,7 @@ test('late added reference bind', function(t) {
     var obj = {things:'stuff'},
         gedi = new Gedi();
 
-    t.plan(4);
+    t.plan(5);
 
     gedi.bind('[foo/things]', function(){
         t.pass('detected [foo/things] change');
@@ -93,7 +93,7 @@ test('recursive added reference bind', function(t) {
 
 
 test('array reference bind', function(t) {
-    t.plan(3);
+    t.plan(4);
 
     var items = [
             {
@@ -126,7 +126,7 @@ test('array reference bind', function(t) {
 });
 
 
-test('recursive added reference bind', function(t) {
+test('recursive added reference bind direct child', function(t) {
     var obj = {},
         gedi = new Gedi();
 
@@ -140,4 +140,26 @@ test('recursive added reference bind', function(t) {
     t.pass();
 
 
+});
+
+
+test('deep reference change', function(t) {
+    var obj = {a:{b:'c'}},
+        gedi = new Gedi();
+
+    t.plan(2);
+
+    gedi.set('[things/0]', obj);
+
+    gedi.set('[obj]', obj);
+
+    gedi.bind('[things]', function(event){
+        t.pass('captured change on [things]');
+    });
+
+    gedi.bind('[obj]', function(){
+        t.pass('captured change on [obj]');
+    });
+
+    gedi.set('[obj/thing/stuff]', 'd');
 });
