@@ -91,7 +91,8 @@ function set(path, value, model) {
         index = 1;
     }
 
-    var reference = model;
+    var reference = model,
+        keysChanged;
 
     for(; index < pathLength; index++){
         var key = pathParts[index];
@@ -108,6 +109,9 @@ function set(path, value, model) {
         }
         if (index === pathLength - 1) {
             // if we are at the end of the line, set to the model
+            if(!(key in reference)){
+                keysChanged = true;
+            }
             reference[key] = value;
         }
             //otherwise, dig deeper
@@ -115,6 +119,8 @@ function set(path, value, model) {
             reference = reference[key];
         }
     }
+
+    return keysChanged;
 }
 
 module.exports = {

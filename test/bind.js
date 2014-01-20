@@ -21,8 +21,24 @@ test('array bind', function(t) {
     t.plan(1);
 
     gedi.set('[things]', []);
-    gedi.bind('[things]', function(){
+    gedi.bind('[things]', function(event){
         t.pass('detected [things] change');
+    });
+
+    gedi.set('[things/0]', 'stuff');
+
+});
+
+test('array length bind', function(t) {
+    var gedi = new Gedi();
+
+    t.plan(1);
+
+    gedi.set('[things]', []);
+    gedi.bind('[things].length', function(event){
+        if(event.captureType === 'keys'){
+            t.pass('detected [things/length] change');
+        }
     });
 
     gedi.set('[things/0]', 'stuff');

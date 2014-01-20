@@ -37,7 +37,7 @@ module.exports = function(modelGet, gel, PathToken){
     ModelEventEmitter.prototype.pushPath = function(path, type, skipReferences){
         var currentEvent = this.events[path];
 
-        if(!currentEvent || type === 'target'){
+        if(!currentEvent || type === 'target' || type === 'keys'){
             this.events[path] = type;
         }
 
@@ -128,13 +128,17 @@ module.exports = function(modelGet, gel, PathToken){
         }
     }
 
-    function trigger(path){
+    function trigger(path, keysChange){
         // resolve path to root
         path = paths.resolve(paths.createRoot(), path);
 
         var emitter = new ModelEventEmitter(path);
 
         bubbleTrigger(path, emitter);
+
+        if(keysChange){
+            emitter.pushPath(paths.resolve(path ,pathConstants.upALevel), 'keys');
+        }
 
         emitter.pushPath(path, 'target');
 

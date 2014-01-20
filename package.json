@@ -12,7 +12,8 @@
     "weakmap": "0.0.x"
   },
   "devDependencies": {
-    "tape": "x.x.x"
+    "tape": "x.x.x",
+    "grape": "~0.1.8"
   },
   "testling": {
     "files": "test/all.js",

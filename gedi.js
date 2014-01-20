@@ -277,11 +277,11 @@ function newGedi(model) {
 
         var previousValue = get(expression, model);
 
-        set(expression, value, model);
+        var keysChanged = set(expression, value, model);
 
         if(!(value instanceof DeletedItem)){
             events.addModelReference(expression, value);
-            events.trigger(expression);
+            events.trigger(expression, keysChanged);
         }
 
         if(!(value && typeof value !== 'object') && previousValue && typeof previousValue === 'object'){
