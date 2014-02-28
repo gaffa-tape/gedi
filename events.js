@@ -277,6 +277,14 @@ module.exports = function(modelGet, gel, PathToken){
     }
 
     function debind(path, callback){
+
+        // If you pass no path and no callback
+        // You are trying to debind the entire gedi instance.
+        if(!path && !callback){
+            resetEvents();
+            return;
+        }
+
         if(typeof path === 'function'){
             callback = path;
             path = null;
@@ -293,8 +301,6 @@ module.exports = function(modelGet, gel, PathToken){
                 while(references.length){
                     debindExpression(references.pop(), callback);
                 }
-            }else{
-                resetEvents();
             }
             return;
         }
