@@ -9,7 +9,7 @@
     "gel-js": "0.6.x",
     "lang-js": "0.1.x",
     "spec-js": "0.0.x",
-    "weakmap": "0.0.x"
+    "weak-map": "^1.0.3"
   },
   "devDependencies": {
     "tape": "x.x.x",

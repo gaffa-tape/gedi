@@ -1,4 +1,4 @@
-var WeakMap = require('weakmap'),
+var WM = typeof WM !== 'undefined' ? WeakMap : require('weak-map'),
     paths = require('gedi-paths'),
     pathConstants = paths.constants
     modelOperations = require('./modelOperations'),
@@ -15,9 +15,9 @@ module.exports = function(modelGet, gel, PathToken){
 
     function resetEvents(){
         modelBindings = {};
-        modelBindingDetails = new WeakMap();
-        callbackReferenceDetails = new WeakMap();
-        modelReferences = new WeakMap();
+        modelBindingDetails = new WM();
+        callbackReferenceDetails = new WM();
+        modelReferences = new WM();
     }
 
     resetEvents();
