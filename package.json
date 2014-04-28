@@ -6,8 +6,8 @@
   "main": "gedi.js",
   "dependencies": {
     "gedi-paths": "0.4.x",
-    "gel-js": "0.6.x",
-    "lang-js": "0.1.x",
+    "gel-js": "^1.0.0",
+    "lang-js": "^1.0.0",
     "spec-js": "0.0.x",
     "weak-map": "^1.0.3"
   },
