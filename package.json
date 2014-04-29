@@ -12,7 +12,6 @@
     "weak-map": "^1.0.3"
   },
   "devDependencies": {
-    "tape": "x.x.x",
     "grape": "~0.1.8"
   },
   "testling": {
@@ -39,7 +38,7 @@
     "url": "http://github.com/KoryNunn/gedi/issues"
   },
   "scripts": {
-    "test": "./node_modules/.bin/tape test/all.js"
+    "test": "node test"
   },
   "directories": {
     "test": "test"
