@@ -9,7 +9,8 @@ module.exports = function(get, model){
     function PathToken(){}
     PathToken = createSpec(PathToken, Token);
     PathToken.prototype.name = 'PathToken';
-    PathToken.prototype.precedence = 4;
+    PathToken.tokenPrecedence = 1;
+    PathToken.prototype.parsePrecedence = 2;
     PathToken.tokenise = function(substring){
         var path = detectPath(substring);
 
