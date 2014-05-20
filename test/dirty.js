@@ -37,10 +37,10 @@ test('dirty expression', function(t) {
     t.plan(2);
 
     gedi.set({things:'stuff'}, false);
-    t.equal(gedi.get('(isDirty)'), false, 'expression ok, model not dirty');
+    t.equal(gedi.get('(isDirty [])'), false, 'expression ok, model not dirty');
 
     gedi.set({things:'stuff'});
-    t.equal(gedi.get('(isDirty)'), true, 'expression ok, model dirty');
+    t.equal(gedi.get('(isDirty [])'), true, 'expression ok, model dirty');
 
 });
 
@@ -73,7 +73,7 @@ test('get all dirty', function(t) {
 
     t.plan(1);
     t.notOk(
-        gedi.get('(getAllDirty).things'),
+        gedi.get('(getAllDirty []).things'),
         'things not in the list of dirty objects'
     );
 

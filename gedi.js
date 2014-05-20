@@ -111,8 +111,13 @@ function newGedi(model) {
     gel.tokenConverters.push(PathToken);
 
     gel.scope.isDirty = function(scope, args){
-        var token = args.getRaw(0, true),
-            path = (token instanceof PathToken) ? token.original : token.sourcePathInfo && token.sourcePathInfo.path;
+        var token = args.getRaw(0, true);
+
+        if(!token){
+            return false;
+        }
+
+        var path = (token instanceof PathToken) ? token.original : token.sourcePathInfo && token.sourcePathInfo.path;
 
         if(!path){
             return false;
@@ -123,14 +128,14 @@ function newGedi(model) {
 
     gel.scope.getAllDirty = function (scope, args) {
         var token = args.getRaw(0, true),
-            source = token.result,
-            path = (token instanceof PathToken) ? token.original : token.sourcePathInfo && token.sourcePathInfo.path;
+            source = token && token.result;
 
         if (source == null) {
             return null;
         }
 
-        result = source.constructor();
+        var result = source.constructor(),
+            path = (token instanceof PathToken) ? token.original : token.sourcePathInfo && token.sourcePathInfo.path;
 
         if(!path){
             return result;
