@@ -111,23 +111,39 @@ function newGedi(model) {
     gel.tokenConverters.push(PathToken);
 
     gel.scope.isDirty = function(scope, args){
-        var token = args.raw()[0];
+        var token = args.getRaw(0, true);
 
-        return isDirty(paths.resolve(scope.get('_gmc_'), (token instanceof PathToken) ? token.original : paths.create()));
+        if(!token){
+            return false;
+        }
+
+        var path = (token instanceof PathToken) ? token.original : token.sourcePathInfo && token.sourcePathInfo.path;
+
+        if(!path){
+            return false;
+        }
+
+        return isDirty(paths.resolve(scope.get('_gmc_'), path));
     };
 
     gel.scope.getAllDirty = function (scope, args) {
-        var token = args.raw()[0],
-            path = paths.resolve(scope.get('_gmc_'), (token instanceof PathToken) && token.original),
-            source = get(path, model),
-            result,
-            itemPath;
+        var token = args.getRaw(0, true),
+            source = token && token.result;
 
         if (source == null) {
             return null;
         }
 
-        result = source.constructor();
+        var result = source.constructor(),
+            path = (token instanceof PathToken) ? token.original : token.sourcePathInfo && token.sourcePathInfo.path;
+
+        if(!path){
+            return result;
+        }
+
+        var resolvedPath = paths.resolve(scope.get('_gmc_'), path),
+            result,
+            itemPath;
 
         for (var key in source) {
             if (source.hasOwnProperty(key)) {
