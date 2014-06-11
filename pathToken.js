@@ -6,7 +6,9 @@ var Lang = require('lang-js'),
 
 module.exports = function(get, model){
 
-    function PathToken(){}
+    function PathToken(path){
+        this.path = path;
+    }
     PathToken = createSpec(PathToken, Token);
     PathToken.prototype.name = 'PathToken';
     PathToken.tokenPrecedence = 1;

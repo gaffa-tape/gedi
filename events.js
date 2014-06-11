@@ -159,8 +159,8 @@ module.exports = function(modelGet, gel, PathToken){
             var tokens = gel.tokenise(expression);
             for(var index = 0; index < tokens.length; index++){
             var token = tokens[index];
-                if(token instanceof PathToken){
-                    paths.push(token.original);
+                if(token.path != null){
+                    paths.push(token.path);
                 }
             }
         } else {
