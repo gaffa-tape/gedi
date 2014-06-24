@@ -11,7 +11,8 @@ module.exports = function(modelGet, gel, PathToken){
     var modelBindings,
         modelBindingDetails,
         callbackReferenceDetails,
-        modelReferences;
+        modelReferences,
+        forEachSourcePath = require('./forEachSourcePath')(gel);
 
     function resetEvents(){
         modelBindings = {};
@@ -147,28 +148,6 @@ module.exports = function(modelGet, gel, PathToken){
         emitter.emit();
     }
 
-    var memoisedExpressionPaths = {};
-    function getPathsInExpression(expression) {
-        var paths = [];
-
-        if(memoisedExpressionPaths[expression]){
-            return memoisedExpressionPaths[expression];
-        }
-
-        if (gel) {
-            var tokens = gel.tokenise(expression);
-            for(var index = 0; index < tokens.length; index++){
-            var token = tokens[index];
-                if(token.path != null){
-                    paths.push(token.path);
-                }
-            }
-        } else {
-            return memoisedExpressionPaths[expression] = [paths.create(expression)];
-        }
-        return memoisedExpressionPaths[expression] = paths;
-    }
-
     function addReferencesForBinding(path){
         var model = modelGet(),
             pathParts = paths.toParts(path),
@@ -214,26 +193,25 @@ module.exports = function(modelGet, gel, PathToken){
         addReferencesForBinding(path);
     }
 
-    function bindExpression(binding, details){
-        var expressionPaths = getPathsInExpression(binding),
-            boundExpressions = {};
+    function bindExpression(expression, details){
+        var boundExpressions = {};
 
-        for(var i = 0; i < expressionPaths.length; i++) {
-            var path = expressionPaths[i];
+        forEachSourcePath(expression, details.parentPath, details.scope, function(path){
             if(!boundExpressions[path]){
                 boundExpressions[path] = true;
                 setBinding(path, details);
             }
-        }
+        });
     }
 
-    function bind(path, callback, parentPath, binding){
+    function bind(path, callback, parentPath, scope){
         parentPath = parentPath || paths.create();
 
         var details = {
-            binding: binding || path,
+            binding: path,
             callback: callback,
-            parentPath: parentPath
+            parentPath: parentPath,
+            scope: scope
         };
 
         // If the binding is a simple path, skip the more complex
@@ -245,10 +223,24 @@ module.exports = function(modelGet, gel, PathToken){
         bindExpression(path, details);
     }
 
+    var memoisedWildcardPaths = {};
+    function pathIsWildcard(path) {
+        if(memoisedWildcardPaths[path]){
+            return memoisedWildcardPaths[path];
+        }
+
+        if (gel) {
+            var tokens = gel.tokenise(path);
+            return memoisedWildcardPaths[path] =
+                tokens.length === 1 &&
+                tokens[0].path === path;
+        }
+    }
+
     function matchWildcardPath(binding, target, parentPath){
         if(
             binding.indexOf(pathConstants.wildcard) >= 0 &&
-            getPathsInExpression(binding)[0] === binding
+            pathIsWildcard(binding)
         ){
             //fully resolve the callback path
             var wildcardParts = paths.toParts(paths.resolve('[/]', parentPath, binding)),
@@ -277,6 +269,10 @@ module.exports = function(modelGet, gel, PathToken){
     }
 
     function debind(path, callback){
+
+        var references = callback && callbackReferenceDetails.get(callback);
+
+        console.log(references);
 
         // If you pass no path and no callback
         // You are trying to debind the entire gedi instance.

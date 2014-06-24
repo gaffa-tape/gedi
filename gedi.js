@@ -49,7 +49,9 @@ function newGedi(model) {
         PathToken = createPathToken(get, model),
 
         // Storage for model event handles
-        events = createEvents(modelGet, gel, PathToken);
+        events = createEvents(modelGet, gel, PathToken),
+
+        forEachSourcePath = require('./forEachSourcePath')(gel);
 
 
     //Initialise model references
@@ -241,34 +243,9 @@ function newGedi(model) {
     //
     //***********************************************
 
-    function getSourcePathInfo(expression, parentPath, subPathOpperation){
-        var scope = {
-                _gmc_: parentPath
-            },
-            path;
-
-        var resultToken = gel.evaluate(expression, scope, true)[0],
-            sourcePathInfo = resultToken.sourcePathInfo;
-
-        if(sourcePathInfo){
-            if(sourcePathInfo.subPaths){
-                each(sourcePathInfo.subPaths, function(item){
-                    subPathOpperation(item);
-                });
-                return;
-            }
-            path = sourcePathInfo.path;
-        }else{
-            path = resultToken.path;
-        }
-        if(path){
-            subPathOpperation(path);
-        }
-    }
-
     function DeletedItem(){}
 
-    function modelSet(expression, value, parentPath, dirty) {
+    function modelSet(expression, value, parentPath, dirty, scope) {
         if(typeof expression === 'object' && !paths.create(expression)){
             dirty = value;
             value = expression;
@@ -278,9 +255,9 @@ function newGedi(model) {
             parentPath = undefined;
         }
 
-        if(expression && !arguments[4]){
-            getSourcePathInfo(expression, parentPath, function(subPath){
-                modelSet(subPath, value, parentPath, dirty, true);
+        if(expression && !arguments[5]){
+            forEachSourcePath(expression, parentPath, scope, function(subPath){
+                modelSet(subPath, value, parentPath, dirty, scope, true);
             });
             return;
         }
@@ -310,16 +287,16 @@ function newGedi(model) {
     //
     //***********************************************
 
-    function modelRemove(expression, parentPath, dirty) {
+    function modelRemove(expression, parentPath, dirty, scope) {
         if(parentPath instanceof Boolean){
             dirty = parentPath;
             parentPath = undefined;
         }
 
-        if(expression && !arguments[3]){
+        if(expression && !arguments[4]){
             parentPaths = {};
-            getSourcePathInfo(expression, parentPath, function(subPath){
-                modelSet(subPath, new DeletedItem(), parentPath, dirty, true);
+            forEachSourcePath(expression, parentPath, scope, function(subPath){
+                modelSet(subPath, new DeletedItem(), parentPath, dirty, scope, true);
                 parentPaths[paths.append(subPath, paths.create(pathConstants.upALevel))] = null;
             });
 
@@ -379,13 +356,13 @@ function newGedi(model) {
     //
     //***********************************************
 
-    function setDirtyState(expression, dirty, parentPath) {
+    function setDirtyState(expression, dirty, parentPath, scope) {
 
         var reference = dirtyModel;
 
-        if(expression && !arguments[3]){
-            getSourcePathInfo(expression, parentPath, function(subPath){
-                setDirtyState(subPath, dirty, parentPath, true);
+        if(expression && !arguments[4]){
+            forEachSourcePath(expression, parentPath, scope, function(subPath){
+                setDirtyState(subPath, dirty, parentPath, scope, true);
             });
             return;
         }
