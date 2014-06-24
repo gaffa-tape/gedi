@@ -148,7 +148,7 @@ module.exports = function(modelGet, gel, PathToken){
     }
 
     var memoisedExpressionPaths = {};
-    function getPathsInExpression(expression) {
+    function getPathsInExpression(expression, scope) {
         var paths = [];
 
         if(memoisedExpressionPaths[expression]){
@@ -159,8 +159,19 @@ module.exports = function(modelGet, gel, PathToken){
             var tokens = gel.tokenise(expression);
             for(var index = 0; index < tokens.length; index++){
             var token = tokens[index];
-                if(token.path != null){
+                if(
+                    token.path != null
+                ){
                     paths.push(token.path);
+                }
+
+                if(
+                    scope &&
+                    token.name === 'IdentifierToken' &&
+                    scope[token.original] &&
+                    scope[token.original].path
+                ){
+                    paths.push(scope[token.original].path);
                 }
             }
         } else {
@@ -215,7 +226,7 @@ module.exports = function(modelGet, gel, PathToken){
     }
 
     function bindExpression(binding, details){
-        var expressionPaths = getPathsInExpression(binding),
+        var expressionPaths = getPathsInExpression(binding, details.scope),
             boundExpressions = {};
 
         for(var i = 0; i < expressionPaths.length; i++) {
@@ -227,28 +238,29 @@ module.exports = function(modelGet, gel, PathToken){
         }
     }
 
-    function bind(path, callback, parentPath, binding){
+    function bind(expression, callback, parentPath, scope){
         parentPath = parentPath || paths.create();
 
         var details = {
-            binding: binding || path,
+            binding: expression,
             callback: callback,
-            parentPath: parentPath
+            parentPath: parentPath,
+            scope: scope
         };
 
         // If the binding is a simple path, skip the more complex
         // expression path binding.
-        if (paths.is(path)) {
-            return setBinding(path, details);
+        if (paths.is(expression)) {
+            return setBinding(expression, details);
         }
 
-        bindExpression(path, details);
+        bindExpression(expression, details);
     }
 
-    function matchWildcardPath(binding, target, parentPath){
+    function matchWildcardPath(binding, target, parentPath, scope){
         if(
             binding.indexOf(pathConstants.wildcard) >= 0 &&
-            getPathsInExpression(binding)[0] === binding
+            getPathsInExpression(binding, scope)[0] === binding
         ){
             //fully resolve the callback path
             var wildcardParts = paths.toParts(paths.resolve('[/]', parentPath, binding)),
@@ -267,8 +279,8 @@ module.exports = function(modelGet, gel, PathToken){
         }
     }
 
-    function debindExpression(binding, callback){
-        var expressionPaths = getPathsInExpression(binding);
+    function debindExpression(binding, callback, scope){
+        var expressionPaths = getPathsInExpression(binding, scope);
 
         for(var i = 0; i < expressionPaths.length; i++) {
             var path = expressionPaths[i];
@@ -276,7 +288,7 @@ module.exports = function(modelGet, gel, PathToken){
         }
     }
 
-    function debind(path, callback){
+    function debind(path, callback, parentPath, scope){
 
         // If you pass no path and no callback
         // You are trying to debind the entire gedi instance.
@@ -291,22 +303,22 @@ module.exports = function(modelGet, gel, PathToken){
         }
 
         //If the binding has opperators in it, break them apart and set them individually.
-        if (!paths.create(path)) {
-            return debindExpression(path, callback);
+        if (path && !paths.is(path)) {
+            return debindExpression(path, callback, scope);
         }
 
         if(path == null){
             var references = callback && callbackReferenceDetails.get(callback);
             if(references){
                 while(references.length){
-                    debindExpression(references.pop(), callback);
+                    debindExpression(references.pop(), callback, scope);
                 }
             }
             return;
         }
 
         // resolve path to root
-        path = paths.resolve(paths.createRoot(), path);
+        path = paths.resolve(parentPath || paths.createRoot(), path);
 
         var targetReference = get(path, modelBindings),
             referenceDetails = modelBindingDetails.get(targetReference);
