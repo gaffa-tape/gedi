@@ -290,11 +290,6 @@ module.exports = function(modelGet, gel, PathToken){
             path = null;
         }
 
-        //If the binding has opperators in it, break them apart and set them individually.
-        if (!paths.create(path)) {
-            return debindExpression(path, callback);
-        }
-
         if(path == null){
             var references = callback && callbackReferenceDetails.get(callback);
             if(references){
@@ -303,6 +298,11 @@ module.exports = function(modelGet, gel, PathToken){
                 }
             }
             return;
+        }
+
+        //If the binding has opperators in it, break them apart and set them individually.
+        if (!paths.is(path)) {
+            return debindExpression(path, callback);
         }
 
         // resolve path to root
