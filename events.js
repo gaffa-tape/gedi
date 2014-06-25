@@ -267,44 +267,7 @@ module.exports = function(modelGet, gel, PathToken){
         }
     }
 
-    function debindExpression(binding, callback){
-        var expressionPaths = getPathsInExpression(binding);
-
-        for(var i = 0; i < expressionPaths.length; i++) {
-            var path = expressionPaths[i];
-                debind(path, callback);
-        }
-    }
-
-    function debind(path, callback){
-
-        // If you pass no path and no callback
-        // You are trying to debind the entire gedi instance.
-        if(!path && !callback){
-            resetEvents();
-            return;
-        }
-
-        if(typeof path === 'function'){
-            callback = path;
-            path = null;
-        }
-
-        if(path == null){
-            var references = callback && callbackReferenceDetails.get(callback);
-            if(references){
-                while(references.length){
-                    debindExpression(references.pop(), callback);
-                }
-            }
-            return;
-        }
-
-        //If the binding has opperators in it, break them apart and set them individually.
-        if (!paths.is(path)) {
-            return debindExpression(path, callback);
-        }
-
+    function debindPath(path, callback){
         // resolve path to root
         path = paths.resolve(paths.createRoot(), path);
 
@@ -320,6 +283,54 @@ module.exports = function(modelGet, gel, PathToken){
                 }
             }
         }
+    }
+
+    function debindCallbackPaths(path, callback){
+        if(callback){
+            var references = callback && callbackReferenceDetails.get(callback);
+            if(references){
+                for(var i = 0; i < references.length; i++) {
+                    if(path != null && references[i] !== path){
+                        continue;
+                    }
+                    debindPath(references.splice(i, 1)[0], callback);
+                    i--;
+                }
+            }
+            return;
+        }
+        debindPath(path, callback);
+    }
+
+    function debindExpression(binding, callback){
+        var expressionPaths = getPathsInExpression(binding);
+
+        for(var i = 0; i < expressionPaths.length; i++) {
+            var path = expressionPaths[i];
+                debindCallbackPaths(path, callback);
+        }
+    }
+
+    function debind(expression, callback){
+
+        // If you pass no path and no callback
+        // You are trying to debind the entire gedi instance.
+        if(!expression && !callback){
+            resetEvents();
+            return;
+        }
+
+        if(typeof expression === 'function'){
+            callback = expression;
+            expression = null;
+        }
+
+        //If the expression is a simple path, skip the expression debind step.
+        if (expression == null || paths.is(expression)) {
+            return debindCallbackPaths(expression, callback);
+        }
+
+        debindExpression(expression, callback);
     }
 
 
