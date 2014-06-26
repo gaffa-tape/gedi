@@ -297,6 +297,21 @@ test('complex expression removing 2', function(t) {
 
 });
 
+test('complex expression removing 3', function(t) {
+    var gedi = new Gedi({stuff:[]});
+
+    gedi.remove('(last [stuff])');
+
+    t.plan(1);
+
+    t.deepEqual(
+        gedi.get('[stuff]'),
+        [],
+        'nothing to remove'
+    );
+
+});
+
 test('set explicit dirty expression', function(t) {
     var gedi = new Gedi({stuff:[1,2,3,4,5]});
 

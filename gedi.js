@@ -341,12 +341,12 @@ function newGedi(model) {
                         if(anyRemoved){
                             events.trigger(parentPath);
                         }
-                    }else{
-                        for(var key in parentObject){
-                            if(parentObject[key] instanceof DeletedItem){
-                                delete parentObject[key];
-                                events.trigger(paths.append(parentPath, key));
-                            }
+                    }
+                    // Always run keys version, because array's might have non-index keys
+                    for(var key in parentObject){
+                        if(parentObject[key] instanceof DeletedItem){
+                            delete parentObject[key];
+                            events.trigger(paths.append(parentPath, key));
                         }
                     }
                 }
