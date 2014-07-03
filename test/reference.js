@@ -163,3 +163,25 @@ test('deep reference change', function(t) {
 
     gedi.set('[obj/thing/stuff]', 'd');
 });
+
+
+test('array item reference change', function(t) {
+    var obj = [{b:'c'}],
+        gedi = new Gedi();
+
+    t.plan(2);
+
+    gedi.set('[items]',obj);
+
+    gedi.set('[obj]', obj[0]);
+
+    gedi.bind('[items]', function(event){
+        t.pass('captured change on [items]');
+    });
+
+    gedi.bind('[obj]', function(){
+        t.pass('captured change on [obj]');
+    });
+
+    gedi.set('[obj/b]', 'd');
+});

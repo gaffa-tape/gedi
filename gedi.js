@@ -317,16 +317,16 @@ function newGedi(model) {
         }
 
         if(expression && !arguments[3]){
-            parentPaths = {};
+            itemParentPaths = {};
             getSourcePathInfo(expression, parentPath, function(subPath){
                 modelSet(subPath, new DeletedItem(), parentPath, dirty, true);
-                parentPaths[paths.append(subPath, paths.create(pathConstants.upALevel))] = null;
+                itemParentPaths[paths.append(subPath, paths.create(pathConstants.upALevel))] = null;
             });
 
-            for(var key in parentPaths){
-                if(parentPaths.hasOwnProperty(key)){
-                    var parentPath = paths.resolve(parentPath || paths.createRoot(), key),
-                        parentObject = get(parentPath, model),
+            for(var key in itemParentPaths){
+                if(itemParentPaths.hasOwnProperty(key)){
+                    var itemParentPath = paths.resolve(parentPath || paths.createRoot(), key),
+                        parentObject = get(itemParentPath, model),
                         isArray = Array.isArray(parentObject);
 
                     if(isArray){
@@ -339,14 +339,14 @@ function newGedi(model) {
                             }
                         }
                         if(anyRemoved){
-                            events.trigger(parentPath);
+                            events.trigger(itemParentPath);
                         }
                     }
                     // Always run keys version, because array's might have non-index keys
                     for(var key in parentObject){
                         if(parentObject[key] instanceof DeletedItem){
                             delete parentObject[key];
-                            events.trigger(paths.append(parentPath, key));
+                            events.trigger(paths.append(itemParentPath, key));
                         }
                     }
                 }
