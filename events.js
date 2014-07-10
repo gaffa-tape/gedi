@@ -191,7 +191,7 @@ module.exports = function(modelGet, gel, PathToken){
             path = paths.create(parts.slice(0, parts.indexOf(pathConstants.wildcard)));
         }
 
-        var resolvedPath = paths.resolve(details.parentPath, path),
+        var resolvedPath = paths.resolve(paths.createRoot(), details.parentPath, path),
             reference = get(resolvedPath, modelBindings) || {},
             referenceDetails = modelBindingDetails.get(reference),
             callbackReferences = callbackReferenceDetails.get(details.callback);
@@ -251,7 +251,7 @@ module.exports = function(modelGet, gel, PathToken){
             getPathsInExpression(binding)[0] === binding
         ){
             //fully resolve the callback path
-            var wildcardParts = paths.toParts(paths.resolve('[/]', parentPath, binding)),
+            var wildcardParts = paths.toParts(paths.resolve(paths.createRoot(), parentPath, binding)),
                 targetParts = paths.toParts(target);
 
             for(var i = 0; i < wildcardParts.length; i++) {
@@ -268,9 +268,6 @@ module.exports = function(modelGet, gel, PathToken){
     }
 
     function debindPath(path, callback){
-        // resolve path to root
-        path = paths.resolve(paths.createRoot(), path);
-
         var targetReference = get(path, modelBindings),
             referenceDetails = modelBindingDetails.get(targetReference);
 
@@ -285,12 +282,14 @@ module.exports = function(modelGet, gel, PathToken){
         }
     }
 
-    function debindCallbackPaths(path, callback){
+    function debindCallbackPaths(path, callback, parentPath){
         if(callback){
-            var references = callback && callbackReferenceDetails.get(callback);
+            var references = callback && callbackReferenceDetails.get(callback),
+                resolvedPath = paths.resolve(paths.createRoot(), parentPath, path);
+
             if(references){
                 for(var i = 0; i < references.length; i++) {
-                    if(path != null && references[i] !== path){
+                    if(path != null && references[i] !== resolvedPath){
                         continue;
                     }
                     debindPath(references.splice(i, 1)[0], callback);
@@ -299,19 +298,19 @@ module.exports = function(modelGet, gel, PathToken){
             }
             return;
         }
-        debindPath(path, callback);
+        debindPath(path);
     }
 
-    function debindExpression(binding, callback){
+    function debindExpression(binding, callback, parentPath){
         var expressionPaths = getPathsInExpression(binding);
 
         for(var i = 0; i < expressionPaths.length; i++) {
             var path = expressionPaths[i];
-                debindCallbackPaths(path, callback);
+                debindCallbackPaths(path, callback, parentPath);
         }
     }
 
-    function debind(expression, callback){
+    function debind(expression, callback, parentPath){
 
         // If you pass no path and no callback
         // You are trying to debind the entire gedi instance.
@@ -327,10 +326,10 @@ module.exports = function(modelGet, gel, PathToken){
 
         //If the expression is a simple path, skip the expression debind step.
         if (expression == null || paths.is(expression)) {
-            return debindCallbackPaths(expression, callback);
+            return debindCallbackPaths(expression, callback, parentPath);
         }
 
-        debindExpression(expression, callback);
+        debindExpression(expression, callback, parentPath);
     }
 
 
