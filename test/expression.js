@@ -327,6 +327,21 @@ test('complex expression removing 4', function(t) {
 
 });
 
+test('expression removing with scope', function(t) {
+    var gedi = new Gedi({a:{b:1}});
+
+    gedi.remove('(getValue [a] b)', null, null, {b: 'b'});
+
+    t.plan(1);
+
+    t.deepEqual(
+        gedi.get('[]'),
+        {a:{}},
+        'removed data'
+    );
+
+});
+
 test('set explicit dirty expression', function(t) {
     var gedi = new Gedi({stuff:[1,2,3,4,5]});
 

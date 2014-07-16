@@ -241,11 +241,11 @@ function newGedi(model) {
     //
     //***********************************************
 
-    function getSourcePathInfo(expression, parentPath, subPathOpperation){
-        var scope = {
-                _gmc_: parentPath
-            },
+    function getSourcePathInfo(expression, parentPath, scope, subPathOpperation){
+        var scope = scope || {},
             path;
+
+        scope._gmc_ = parentPath;
 
         var resultToken = gel.evaluate(expression, scope, true)[0],
             sourcePathInfo = resultToken.sourcePathInfo;
@@ -268,7 +268,27 @@ function newGedi(model) {
 
     function DeletedItem(){}
 
-    function modelSet(expression, value, parentPath, dirty) {
+    function modelSetPath(path, value, parentPath, dirty, scope){
+        parentPath = parentPath || paths.create();
+        path = paths.resolve(parentPath, path);
+
+        setDirtyState(path, dirty);
+
+        var previousValue = get(path, model);
+
+        var keysChanged = set(path, value, model);
+
+        if(!(value instanceof DeletedItem)){
+            events.addModelReference(path, value);
+            events.trigger(path, keysChanged);
+        }
+
+        if(!(value && typeof value !== 'object') && previousValue && typeof previousValue === 'object'){
+            events.removeModelReference(path, previousValue);
+        }
+    }
+
+    function modelSet(expression, value, parentPath, dirty, scope) {
         if(typeof expression === 'object' && !paths.create(expression)){
             dirty = value;
             value = expression;
@@ -278,30 +298,9 @@ function newGedi(model) {
             parentPath = undefined;
         }
 
-        if(expression && !arguments[4]){
-            getSourcePathInfo(expression, parentPath, function(subPath){
-                modelSet(subPath, value, parentPath, dirty, true);
-            });
-            return;
-        }
-
-        parentPath = parentPath || paths.create();
-        expression = paths.resolve(parentPath, expression);
-
-        setDirtyState(expression, dirty);
-
-        var previousValue = get(expression, model);
-
-        var keysChanged = set(expression, value, model);
-
-        if(!(value instanceof DeletedItem)){
-            events.addModelReference(expression, value);
-            events.trigger(expression, keysChanged);
-        }
-
-        if(!(value && typeof value !== 'object') && previousValue && typeof previousValue === 'object'){
-            events.removeModelReference(expression, previousValue);
-        }
+        getSourcePathInfo(expression, parentPath, scope, function(subPath){
+            modelSetPath(subPath, value, parentPath, dirty, scope);
+        });
     }
 
     //***********************************************
@@ -310,67 +309,47 @@ function newGedi(model) {
     //
     //***********************************************
 
-    function modelRemove(expression, parentPath, dirty) {
+    function modelRemove(expression, parentPath, dirty, scope) {
         if(parentPath instanceof Boolean){
             dirty = parentPath;
             parentPath = undefined;
         }
 
-        if(expression && !arguments[3]){
-            itemParentPaths = {};
-            getSourcePathInfo(expression, parentPath, function(subPath){
-                modelSet(subPath, new DeletedItem(), parentPath, dirty, true);
-                itemParentPaths[paths.append(subPath, paths.create(pathConstants.upALevel))] = null;
-            });
+        itemParentPaths = {};
+        getSourcePathInfo(expression, parentPath, scope, function(subPath){
+            modelSetPath(subPath, new DeletedItem(), parentPath, dirty, scope);
+            itemParentPaths[paths.append(subPath, paths.create(pathConstants.upALevel))] = null;
+        });
 
-            for(var key in itemParentPaths){
-                if(itemParentPaths.hasOwnProperty(key)){
-                    var itemParentPath = paths.resolve(parentPath || paths.createRoot(), key),
-                        parentObject = get(itemParentPath, model),
-                        isArray = Array.isArray(parentObject);
+        for(var key in itemParentPaths){
+            if(itemParentPaths.hasOwnProperty(key)){
+                var itemParentPath = paths.resolve(parentPath || paths.createRoot(), key),
+                    parentObject = get(itemParentPath, model),
+                    isArray = Array.isArray(parentObject);
 
-                    if(isArray){
-                        var anyRemoved;
-                        for(var i = 0; i < parentObject.length; i++){
-                            if(parentObject[i] instanceof DeletedItem){
-                                parentObject.splice(i, 1);
-                                i--;
-                                anyRemoved = true;
-                            }
-                        }
-                        if(anyRemoved){
-                            events.trigger(itemParentPath);
+                if(isArray){
+                    var anyRemoved;
+                    for(var i = 0; i < parentObject.length; i++){
+                        if(parentObject[i] instanceof DeletedItem){
+                            parentObject.splice(i, 1);
+                            i--;
+                            anyRemoved = true;
                         }
                     }
-                    // Always run keys version, because array's might have non-index keys
-                    for(var key in parentObject){
-                        if(parentObject[key] instanceof DeletedItem){
-                            delete parentObject[key];
-                            events.trigger(paths.append(itemParentPath, key));
-                        }
+                    if(anyRemoved){
+                        events.trigger(itemParentPath);
+                    }
+                }
+                // Always run keys version, because array's might have non-index keys
+                for(var key in parentObject){
+                    if(parentObject[key] instanceof DeletedItem){
+                        delete parentObject[key];
+                        events.trigger(paths.append(itemParentPath, key));
                     }
                 }
             }
-
-            return;
         }
 
-        parentPath = parentPath || paths.create();
-        expression = paths.resolve(parentPath, expression);
-
-        setDirtyState(expression, dirty);
-
-        var removedItem = get(expression, model),
-            parentObject = remove(expression, model);
-
-        if(Array.isArray(parentObject)){
-            //trigger one above
-            events.trigger(paths.resolve(paths.createRoot(), paths.append(expression, pathConstants.upALevel)));
-        }else{
-            events.trigger(expression);
-        }
-
-        events.removeModelReference(expression, removedItem);
     }
 
     //***********************************************
@@ -379,18 +358,9 @@ function newGedi(model) {
     //
     //***********************************************
 
-    function setDirtyState(expression, dirty, parentPath) {
-
+    function setPathDirtyState(path, dirty, parentPath, scope){
         var reference = dirtyModel;
-
-        if(expression && !arguments[3]){
-            getSourcePathInfo(expression, parentPath, function(subPath){
-                setDirtyState(subPath, dirty, parentPath, true);
-            });
-            return;
-        }
-
-        if(!paths.create(expression)){
+        if(!paths.create(path)){
             throw exceptions.invalidPath;
         }
 
@@ -399,7 +369,7 @@ function newGedi(model) {
 
         dirty = dirty !== false;
 
-        if(paths.isRoot(expression)){
+        if(paths.isRoot(path)){
             dirtyModel = {
                 '_isDirty_': dirty
             };
@@ -408,11 +378,11 @@ function newGedi(model) {
 
         var index = 0;
 
-        if(paths.isAbsolute(expression)){
+        if(paths.isAbsolute(path)){
             index = 1;
         }
 
-        var pathParts = paths.toParts(paths.resolve(parentPath, expression));
+        var pathParts = paths.toParts(paths.resolve(parentPath, path));
 
         for(; index < pathParts.length; index++){
             var key = pathParts[index];
@@ -431,6 +401,12 @@ function newGedi(model) {
         if(!pathParts.length){
             dirtyModel['_isDirty_'] = dirty;
         }
+    }
+
+    function setDirtyState(expression, dirty, parentPath, scope) {
+        getSourcePathInfo(expression, parentPath, scope, function(subPath){
+            setPathDirtyState(subPath, dirty, parentPath, scope);
+        });
     }
 
     //***********************************************
