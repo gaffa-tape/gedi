@@ -93,3 +93,17 @@ test('tree creation', function(t) {
     );
 
 });
+
+test('tree creation arrays', function(t) {
+    var gedi = new Gedi();
+
+    t.plan(1);
+
+    gedi.set('[thing/0]', 'things');
+    t.deepEqual(
+        gedi.get('[thing]'),
+        ['things'],
+        'created full tree [thing/3]'
+    );
+
+});

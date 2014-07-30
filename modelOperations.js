@@ -53,6 +53,9 @@ function get(path, model) {
 }
 
 function overwriteModel(replacement, model){
+    if(typeof replacement !== 'object' || replacement === null){
+        throw "The model must be an object";
+    } 
     if(replacement === model){
         return;
     }
@@ -92,19 +95,21 @@ function set(path, value, model) {
     }
 
     var reference = model,
-        keysChanged;
+        keysChanged,
+        previousReference,
+        previousKey;
 
     for(; index < pathLength; index++){
         var key = pathParts[index];
 
         // if we have hit a non-object property on the reference and we have more keys after this one
         // make an object (or array) here and move on.
-        if ((typeof reference[key] !== "object" || reference[key] === null) && index < pathLength - 1) {
+        if ((typeof reference !== "object" || reference === null) && index < pathLength) {
             if (!isNaN(key)) {
-                reference[key] = [];
+                reference = previousReference[previousKey] = [];
             }
             else {
-                reference[key] = {};
+                reference = previousReference[previousKey] = {};
             }
         }
         if (index === pathLength - 1) {
@@ -116,6 +121,8 @@ function set(path, value, model) {
         }
             //otherwise, dig deeper
         else {
+            previousReference = reference;
+            previousKey = key;
             reference = reference[key];
         }
     }
