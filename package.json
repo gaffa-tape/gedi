@@ -8,11 +8,13 @@
     "gedi-paths": "^1.0.0",
     "gel-js": "^1.5.0",
     "lang-js": "^2.0.0",
+    "leak-map": "^1.0.0",
     "spec-js": "0.0.x",
     "weak-map": "^1.0.3"
   },
   "devDependencies": {
-    "grape": "~0.1.8"
+    "grape": "^1.0.2",
+    "ieify": "^1.1.0"
   },
   "testling": {
     "files": "test/all.js",
@@ -38,7 +40,8 @@
     "url": "http://github.com/KoryNunn/gedi/issues"
   },
   "scripts": {
-    "test": "node test"
+    "test": "node test",
+    "build": "browserify ./test/index.js | ieify > ./test/index.browser.js"
   },
   "directories": {
     "test": "test"
