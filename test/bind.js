@@ -1,5 +1,6 @@
 var Gedi = require('../'),
-    test = require('grape');
+    test = require('grape'),
+    createExpressionToken = require('../expressionToken');
 
 test('basic bind', function(t) {
     var gedi = new Gedi();
@@ -187,5 +188,31 @@ test('ignored sink bind', function(t) {
     });
 
     gedi.set('[thing]', 1);
+
+});
+
+test.only('scope included expressions', function(t) {
+    var gedi = new Gedi({
+        majiggers:[1,2]
+    });
+
+    var ExpressionToken = createExpressionToken(function(expression, scope){
+            return gedi.get(expression, null, scope, true);
+        }),
+        thingToken = new ExpressionToken('(last [majiggers])'),
+        scope = {
+            thing: thingToken
+        };
+
+    thingToken.evaluate(scope);
+
+    t.plan(2);
+
+    gedi.bind('thing', function(event){
+        t.pass('captured event on identifier thing');
+        t.equal(event.getValue(scope), 3);
+    }, null, scope);
+
+    gedi.set('[majiggers/2]', 3);
 
 });

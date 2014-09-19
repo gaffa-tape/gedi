@@ -3,7 +3,10 @@ var WeakMap = require('./weakmap'),
     pathConstants = paths.constants
     modelOperations = require('./modelOperations'),
     get = modelOperations.get,
-    set = modelOperations.set;
+    set = modelOperations.set,
+    getExpressionPaths = require('./getExpressionPaths'),
+    Token = require('lang-js').Token;
+
 
 var isBrowser = typeof Node != 'undefined';
 
@@ -149,24 +152,11 @@ module.exports = function(modelGet, gel, PathToken){
 
     var memoisedExpressionPaths = {};
     function getPathsInExpression(expression) {
-        var paths = [];
-
         if(memoisedExpressionPaths[expression]){
             return memoisedExpressionPaths[expression];
         }
 
-        if (gel) {
-            var tokens = gel.tokenise(expression);
-            for(var index = 0; index < tokens.length; index++){
-            var token = tokens[index];
-                if(token.path != null){
-                    paths.push(token.path);
-                }
-            }
-        } else {
-            return memoisedExpressionPaths[expression] = [paths.create(expression)];
-        }
-        return memoisedExpressionPaths[expression] = paths;
+        return memoisedExpressionPaths[expression] = getExpressionPaths(expression, gel);
     }
 
     function addReferencesForBinding(path){
@@ -214,9 +204,15 @@ module.exports = function(modelGet, gel, PathToken){
         addReferencesForBinding(path);
     }
 
-    function bindExpression(binding, details){
+    function bindExpression(binding, details, scope){
         var expressionPaths = getPathsInExpression(binding),
             boundExpressions = {};
+
+        for(var key in scope){
+            if(scope[key] instanceof Token && scope[key].expression){
+                expressionPaths.push.apply(expressionPaths, getPathsInExpression(scope[key].expression));
+            }
+        }
 
         for(var i = 0; i < expressionPaths.length; i++) {
             var path = expressionPaths[i];
@@ -227,11 +223,11 @@ module.exports = function(modelGet, gel, PathToken){
         }
     }
 
-    function bind(path, callback, parentPath, binding){
+    function bind(path, callback, parentPath, scope){
         parentPath = parentPath || paths.create();
 
         var details = {
-            binding: binding || path,
+            binding: path,
             callback: callback,
             parentPath: parentPath
         };
@@ -242,7 +238,7 @@ module.exports = function(modelGet, gel, PathToken){
             return setBinding(path, details);
         }
 
-        bindExpression(path, details);
+        bindExpression(path, details, scope);
     }
 
     function matchWildcardPath(binding, target, parentPath){

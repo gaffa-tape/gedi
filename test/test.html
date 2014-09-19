@@ -4,8 +4,12 @@
     </head>
     <body>
         <script type="text/javascript">
-            document.write('<script src="//polyfill.io?_=' + (new Date()).getTime() + '">\<\/script>');
-            document.write('<script src="index.browser.js?_=' + (new Date()).getTime() + '">\<\/script>');
+        	var random = (new Date()).getTime();
+
+        	random = '';
+
+            document.write('<script src="//polyfill.io?_=' + random + '">\<\/script>');
+            document.write('<script src="index.browser.js?_=' + random + '">\<\/script>');
         </script>
     </body>
 </html>
