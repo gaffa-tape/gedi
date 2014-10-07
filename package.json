@@ -9,7 +9,7 @@
     "gel-js": "^1.5.0",
     "lang-js": "^2.0.0",
     "leak-map": "^1.0.0",
-    "spec-js": "0.0.x",
+    "spec-js": "^1.0.0",
     "weak-map": "^1.0.3"
   },
   "devDependencies": {
