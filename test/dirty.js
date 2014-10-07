@@ -94,3 +94,21 @@ test('get all dirty - multiple changes', function(t) {
     );
 
 });
+
+test.only('reference dirty', function(t) {
+    var thing = {c:1},
+        gedi = new Gedi({a:thing, b:thing});
+
+    gedi.set('[a/c]', 2);
+
+    t.plan(2);
+    t.ok(
+        gedi.get('(isDirty [a/c])'),
+        'Reference is dirty'
+    );
+    t.ok(
+        gedi.get('(isDirty [b/c])'),
+        'Reference is dirty'
+    );
+
+});
