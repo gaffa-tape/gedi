@@ -355,8 +355,12 @@ module.exports = function(modelGet, gel, PathToken){
             return;
         }
 
-        for(var key in object){
-            var prop = object[key];
+        addModelReference(object.constructor.prototype);
+        var keys = Object.keys(object);
+
+        for(var i = 0; i < keys.length; i++){
+            var key = keys[i],
+                prop = object[key];
 
             // Faster to check again here than to create pointless paths.
             if(prop && typeof prop === 'object'){
