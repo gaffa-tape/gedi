@@ -339,8 +339,11 @@ module.exports = function(modelGet, gel, PathToken){
             return;
         }
 
-        var path = paths.resolve(paths.createRoot(),path),
-            objectReferences = modelReferences.get(object);
+        if(!paths.isAbsolute(path)){
+            path = paths.resolve(paths.createRoot(),path);
+        }
+
+        var objectReferences = modelReferences.get(object);
 
         if(!objectReferences){
             objectReferences = {};
