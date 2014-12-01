@@ -353,6 +353,29 @@ module.exports = function(modelGet, gel, PathToken){
         if(!(path in objectReferences)){
             objectReferences[path] = null;
         }
+
+        if(isBrowser && object instanceof Node){
+            return;
+        }
+
+        addModelReference(object.constructor.prototype);
+        var keys = Object.keys(object);
+
+        for(var i = 0; i < keys.length; i++){
+            var key = keys[i],
+                prop = object[key];
+
+            // Faster to check again here than to create pointless paths.
+            if(prop && typeof prop === 'object'){
+                if(modelReferences.has(prop)){
+                    if(prop !== object){
+                        modelReferences.get(prop)[paths.append(path, key)] = null;
+                    }
+                }else{
+                    addModelReference(paths.append(path, key), prop);
+                }
+            }
+        }
     }
 
     function removeModelReference(path, object){

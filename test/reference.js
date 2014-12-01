@@ -188,7 +188,7 @@ test('deep reference change', function(t) {
 });
 
 
-test.only('array item reference change', function(t) {
+test('array item reference change', function(t) {
     var obj = [{b:'c'}],
         gedi = new Gedi();
 

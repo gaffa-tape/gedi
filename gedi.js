@@ -270,9 +270,8 @@ function newGedi(model) {
 
         setDirtyState(path, dirty);
 
-        var previousValue = get(path, model);
-
-        var keysChanged = set(path, value, model);
+        var previousValue = get(path, model),
+            keysChanged = set(path, value, model);
 
         if(!(value instanceof DeletedItem)){
             events.trigger(path, keysChanged);
