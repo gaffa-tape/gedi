@@ -51,10 +51,6 @@ function newGedi(model) {
         // Storage for model event handles
         events = createEvents(modelGet, gel, PathToken);
 
-
-    //Initialise model references
-    events.addModelReference('[/]', model);
-
     //internal functions
 
     //***********************************************
@@ -279,11 +275,13 @@ function newGedi(model) {
         var keysChanged = set(path, value, model);
 
         if(!(value instanceof DeletedItem)){
-            events.addModelReference(path, value);
             events.trigger(path, keysChanged);
+            if(value !== previousValue){
+                events.addModelReference(path, value);
+            }
         }
 
-        if(!(value && typeof value !== 'object') && previousValue && typeof previousValue === 'object'){
+        if(value !== previousValue && previousValue && typeof previousValue === 'object'){
             events.removeModelReference(path, previousValue);
         }
     }
